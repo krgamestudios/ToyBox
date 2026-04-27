@@ -1,6 +1,8 @@
 # Pactoy
 
-A test game for The Toy Programming Langauge.
+A test game for The Toy Programming Langauge. Requires raylib and Toy by default.
+
+See https://toylang.com/ for details.
 
 ## Raylib for RPi
 
