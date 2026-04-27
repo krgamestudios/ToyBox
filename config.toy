@@ -1,0 +1,3 @@
+var screenWidth = 1280;
+var screenHeight = 720;
+var screenCaption = "Hello raylib from Toy!";
