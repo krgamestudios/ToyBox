@@ -12,3 +12,7 @@ cmake -B build -DPLATFORM=SDL -DOPENGL_VERSION=Software
 cmake --build build
 cd build && sudo make install
 ```
+
+## Asset Sources
+
+https://www.spriters-resource.com/arcade/pacman/asset/52631/

@@ -76,6 +76,7 @@ int main() {
 
 	unsigned char* code = makeCodeFromSource(source);
 
+	//build and run the VM
 	Toy_VM vm;
 	Toy_initVM(&vm);
 	Toy_bindVM(&vm, code, NULL);
@@ -90,8 +91,12 @@ int main() {
 	int screenHeight = screenHeightPtr != NULL && TOY_VALUE_IS_INTEGER(*screenHeightPtr) ? TOY_VALUE_AS_INTEGER(*screenHeightPtr) : 480;
 	const char* screenCaption = screenCaptionPtr != NULL && TOY_VALUE_IS_STRING(*screenCaptionPtr) ? TOY_VALUE_AS_STRING(*screenCaptionPtr)->leaf.data : "";
 
+	//setup raylib
 	InitWindow(screenWidth, screenHeight, screenCaption);
 	SetTargetFPS(60);
+
+	//load a sprite
+	Image sprite = LoadImage("assets/pacman.png");
 
 	while (!WindowShouldClose()) {
 		//drawing
