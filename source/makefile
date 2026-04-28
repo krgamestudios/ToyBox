@@ -1,7 +1,7 @@
 #compiler settings
 CC=gcc
 CFLAGS+=-std=c17 -g -Wall -Werror -Wextra -Wpedantic -Wformat=2 -Wno-newline-eof
-LIBS+=-lToy -lraylib -lSDL2 -lm
+LIBS+=-lToy -lraylib -lX11 -lm
 LDFLAGS+=-Wl,-rpath,'$$ORIGIN'
 
 ifeq ($(shell uname),Darwin) #make sure there's enough space for the dylib fix

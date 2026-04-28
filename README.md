@@ -7,8 +7,7 @@ See https://toylang.com/ for details.
 ## Raylib for RPi
 
 ```bash
-#why does raylib fall back to SDL?
-cmake -B build -DPLATFORM=SDL -DOPENGL_VERSION=Software
+cmake -B build -DCMAKE_BUILD_TYPE="Release" -DPLATFORM="Desktop" -DOPENGL_VERSION="2.1"
 cmake --build build
 cd build && sudo make install
 ```
