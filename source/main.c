@@ -63,6 +63,28 @@ unsigned char* makeCodeFromSource(const char* source) {
 	return code;
 }
 
+//sprites seen on the screen
+typedef struct Entity {
+	Texture2D texture;
+	Rectangle rect;
+	Vector2 position;
+} Entity;
+
+Entity loadEntity(const char* fileName, Rectangle rect) {
+	Entity entity = {0};
+	entity.texture = LoadTexture(fileName);
+	entity.rect = rect;
+	return entity;
+}
+
+void unloadEntity(Entity entity) {
+	UnloadTexture(entity.texture);
+}
+
+void drawEntity(Entity entity) {
+	DrawTextureRec(entity.texture, entity.rect, entity.position, WHITE);
+}
+
 //main file
 int main() {
 	//example Toy controlling the window stuff
@@ -96,16 +118,28 @@ int main() {
 	SetTargetFPS(60);
 
 	//load a sprite
-	Image sprite = LoadImage("assets/pacman.png");
+	Entity entity = loadEntity("assets/pacman.png", (Rectangle){0,0,16,16});
 
 	while (!WindowShouldClose()) {
+		//input
+		if (IsKeyDown(KEY_UP)) entity.position.y -= 10.0f;
+		if (IsKeyDown(KEY_DOWN)) entity.position.y += 10.0f;
+		if (IsKeyDown(KEY_LEFT)) entity.position.x -= 10.0f;
+		if (IsKeyDown(KEY_RIGHT)) entity.position.x += 10.0f;
+
 		//drawing
 		BeginDrawing();
 		ClearBackground(RAYWHITE);
-		DrawText("Do you have games on your phone?", 100, 100, 20, LIGHTGRAY);
+
+		drawEntity(entity);
+
+		DrawFPS(0,0);
+		// DrawText("Do you have games on your phone?", 100, 100, 20, LIGHTGRAY);
 		EndDrawing();
 
 	}
+
+	unloadEntity(entity);
 
 	CloseWindow();
 
