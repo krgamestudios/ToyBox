@@ -5,29 +5,29 @@
 #LDFLAGS+=
 
 #directories
-export PAC_SOURCEDIR=source
-export PAC_OUTDIR=out
-export PAC_OBJDIR=obj
+export GAME_SOURCEDIR=source
+export GAME_OUTDIR=out
+export GAME_OBJDIR=obj
 
 #Override Toy's build destination
 export TOY_SOURCEDIR=Toy/source
-export TOY_OUTDIR=../$(PAC_OUTDIR)
-export TOY_OBJDIR=$(PAC_OBJDIR)
+export TOY_OUTDIR=../$(GAME_OUTDIR)
+export TOY_OBJDIR=$(GAME_OBJDIR)
 
 #targets
-all: $(PAC_OUTDIR) Toy source
+all: $(GAME_OUTDIR) Toy source
 
 .PHONY: source
 source:
-	$(MAKE) -C $(PAC_SOURCEDIR)
+	$(MAKE) -C $(GAME_SOURCEDIR)
 
 .PHONY: Toy
 Toy:
 	$(MAKE) -C $(TOY_SOURCEDIR)
 
 #util targets
-$(PAC_OUTDIR):
-	mkdir $(PAC_OUTDIR)
+$(GAME_OUTDIR):
+	mkdir $(GAME_OUTDIR)
 
 #util commands
 .PHONY: clean
