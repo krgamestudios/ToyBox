@@ -63,26 +63,23 @@ unsigned char* makeCodeFromSource(const char* source) {
 	return code;
 }
 
-//sprites seen on the screen
-typedef struct Entity {
+//player data
+typedef struct PlayerData {
 	Texture2D texture;
 	Rectangle rect;
 	Vector2 position;
-} Entity;
+	//TODO: hitbox, hurtbox, motion, etc.
+} PlayerData;
 
-Entity loadEntity(const char* fileName, Rectangle rect) {
-	Entity entity = {0};
-	entity.texture = LoadTexture(fileName);
-	entity.rect = rect;
-	return entity;
+PlayerData loadPlayerData(const char* fileName, Rectangle rect) {
+	PlayerData player = {0};
+	player.texture = LoadTexture(fileName);
+	player.rect = rect;
+	return player;
 }
 
-void unloadEntity(Entity entity) {
-	UnloadTexture(entity.texture);
-}
-
-void drawEntity(Entity entity) {
-	DrawTextureRec(entity.texture, entity.rect, entity.position, WHITE);
+void unloadPlayerData(PlayerData player) {
+	UnloadTexture(player.texture);
 }
 
 //main file
@@ -118,28 +115,27 @@ int main() {
 	SetTargetFPS(60);
 
 	//load a sprite
-	Entity entity = loadEntity("assets/parvati.png", (Rectangle){0,0,32,32});
+	PlayerData player = loadPlayerData("assets/parvati.png", (Rectangle){0,0,32,32});
 
 	while (!WindowShouldClose()) {
 		//input
-		if (IsKeyDown(KEY_UP)) entity.position.y -= 5.0f;
-		if (IsKeyDown(KEY_DOWN)) entity.position.y += 5.0f;
-		if (IsKeyDown(KEY_LEFT)) entity.position.x -= 5.0f;
-		if (IsKeyDown(KEY_RIGHT)) entity.position.x += 5.0f;
+		if (IsKeyDown(KEY_UP)) player.position.y -= 5.0f;
+		if (IsKeyDown(KEY_DOWN)) player.position.y += 5.0f;
+		if (IsKeyDown(KEY_LEFT)) player.position.x -= 5.0f;
+		if (IsKeyDown(KEY_RIGHT)) player.position.x += 5.0f;
 
 		//drawing
 		BeginDrawing();
 		ClearBackground(RAYWHITE);
 
-		drawEntity(entity);
+		//draw the player
+		DrawTextureRec(player.texture, player.rect, player.position, WHITE);
 
 		DrawFPS(0,0);
-		// DrawText("Do you have games on your phone?", 100, 100, 20, LIGHTGRAY);
 		EndDrawing();
-
 	}
 
-	unloadEntity(entity);
+	unloadPlayerData(player);
 
 	CloseWindow();
 
