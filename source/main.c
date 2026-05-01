@@ -7,6 +7,8 @@
 #include "toy_compiler.h"
 #include "toy_vm.h"
 
+#include "monster.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -93,13 +95,17 @@ int main() {
 		return -1;
 	}
 
-	unsigned char* code = makeCodeFromSource(source);
+	unsigned char* configCode = makeCodeFromSource(source);
+	unsigned char* invokeOnReady = makeCodeFromSource("onReady();");
+	unsigned char* invokeOnStep = makeCodeFromSource("onStep();");
+	unsigned char* invokeOnFinished = makeCodeFromSource("onFinished();");
 
 	//build and run the VM
 	Toy_VM vm;
 	Toy_initVM(&vm);
-	Toy_bindVM(&vm, code, NULL);
+	Toy_bindVM(&vm, configCode, NULL);
 	Toy_runVM(&vm);
+	Toy_resetVM(&vm, true, false); //leave it in a valid, but unset state
 
 	//extract the settings
 	Toy_Value* screenWidthPtr = Toy_accessScopeAsPointer(vm.scope, Toy_toString(&vm.memoryBucket, "screenWidth") );
@@ -117,12 +123,25 @@ int main() {
 	//load a sprite
 	PlayerData player = loadPlayerData("assets/parvati.png", (Rectangle){0,0,32,32});
 
+	//initialize the monster object pool and run the setup function
+	initMonsterObjectPool(&vm);
+
+	//run the onStep function (or die if it's undefined)
+	Toy_bindVM(&vm, invokeOnReady, NULL);
+	Toy_runVM(&vm);
+	Toy_resetVM(&vm, true, false);
+
 	while (!WindowShouldClose()) {
 		//input
 		if (IsKeyDown(KEY_UP)) player.position.y -= 5.0f;
 		if (IsKeyDown(KEY_DOWN)) player.position.y += 5.0f;
 		if (IsKeyDown(KEY_LEFT)) player.position.x -= 5.0f;
 		if (IsKeyDown(KEY_RIGHT)) player.position.x += 5.0f;
+
+		//run the onStep function (or die if it's undefined)
+		Toy_bindVM(&vm, invokeOnStep, NULL);
+		Toy_runVM(&vm);
+		Toy_resetVM(&vm, true, false);
 
 		//drawing
 		BeginDrawing();
@@ -131,16 +150,26 @@ int main() {
 		//draw the player
 		DrawTextureRec(player.texture, player.rect, player.position, WHITE);
 
+		drawMonsterPool(&vm);
+
 		DrawFPS(0,0);
 		EndDrawing();
 	}
 
+	Toy_bindVM(&vm, invokeOnFinished, NULL);
+	Toy_runVM(&vm);
+	Toy_resetVM(&vm, true, false);
+
+	freeMonsterObjectPool(&vm);
 	unloadPlayerData(player);
 
 	CloseWindow();
 
 	Toy_freeVM(&vm);
-	free(code);
+	free(invokeOnReady);
+	free(invokeOnStep);
+	free(invokeOnFinished);
+	free(configCode);
 
 	return 0;
 }

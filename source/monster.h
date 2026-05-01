@@ -1,17 +1,9 @@
 #pragma once
 
-#include "raylib.h"
+#include "toy_vm.h"
 
-//sprites loaded from disk
-typedef struct MonsterSprite {
-	Texture2D texture;
-	Rectangle rect;
-} MonsterSprite;
+//object pool system
+void initMonsterObjectPool(Toy_VM* vm);
+void freeMonsterObjectPool(Toy_VM* vm);
 
-//Monsters loaded from scripts
-typedef struct MonsterData {
-	MonsterSprite* sprite;
-	Vector2 position;
-	int health;
-} MonsterData;
-
+void drawMonsterPool(Toy_VM* vm);
