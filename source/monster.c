@@ -31,6 +31,12 @@ static Toy_Array* monsterArray = NULL;
 static void loadMonsterSprite(Toy_VM* vm) {
 	//key, file, width, height -> null
 
+	//check for initialization
+	if (spriteTable == NULL || monsterArray == NULL) {
+		fprintf(stderr, TOY_CC_ERROR "ERROR: Object pool for monster system hasn't been initialized" TOY_CC_RESET "\n");
+		return;
+	}
+
 	//check parameter count
 	if (vm->stack->count < 4) {
 		fprintf(stderr, TOY_CC_ERROR "ERROR: Not enough parameters found in 'loadMonsterSprite'" TOY_CC_RESET "\n");
@@ -79,6 +85,12 @@ static void loadMonsterSprite(Toy_VM* vm) {
 
 static void spawnMonsterAt(Toy_VM* vm) {
 	//sprite, x, y -> void
+
+	//check for initialization
+	if (spriteTable == NULL || monsterArray == NULL) {
+		fprintf(stderr, TOY_CC_ERROR "ERROR: Object pool for monster system hasn't been initialized" TOY_CC_RESET "\n");
+		return;
+	}
 
 	//check parameter count
 	if (vm->stack->count < 3) {
@@ -179,6 +191,13 @@ void initMonsterObjectPool(Toy_VM* vm) {
 
 void freeMonsterObjectPool(Toy_VM* vm) {
 	(void)vm;
+
+	//free the GL textures
+	for (unsigned int i = 0; i < spriteTable->capacity; i++) {
+		if (TOY_VALUE_IS_OPAQUE(spriteTable->data[i].value)) {
+			UnloadTexture(((MonsterSprite*)TOY_VALUE_AS_OPAQUE(spriteTable->data[i].value))->texture);
+		}
+	}
 
 	Toy_freeTable(spriteTable);
 	spriteTable = NULL;

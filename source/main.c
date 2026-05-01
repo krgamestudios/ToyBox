@@ -127,10 +127,13 @@ int main() {
 	//initialize the monster object pool and run the setup function
 	initMonsterObjectPool(&vm);
 
-	//run the onStep function (or die if it's undefined)
+	//setup
 	Toy_bindVM(&vm, invokeOnReady, NULL);
 	Toy_runVM(&vm);
 	Toy_resetVM(&vm, true, false);
+
+	//onStep is called each frame
+	Toy_bindVM(&vm, invokeOnStep, NULL);
 
 	while (!WindowShouldClose()) {
 		//input
@@ -139,10 +142,8 @@ int main() {
 		if (IsKeyDown(KEY_LEFT)) player.position.x -= 5.0f;
 		if (IsKeyDown(KEY_RIGHT)) player.position.x += 5.0f;
 
-		//run the onStep function (or die if it's undefined)
-		Toy_bindVM(&vm, invokeOnStep, NULL);
+		//run the onStep function
 		Toy_runVM(&vm);
-		Toy_resetVM(&vm, true, false);
 
 		//drawing
 		BeginDrawing();
@@ -157,6 +158,10 @@ int main() {
 		EndDrawing();
 	}
 
+	//clear onStep
+	Toy_resetVM(&vm, true, false);
+
+	//cleanup
 	Toy_bindVM(&vm, invokeOnFinished, NULL);
 	Toy_runVM(&vm);
 	Toy_resetVM(&vm, true, false);
