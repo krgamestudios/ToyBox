@@ -118,14 +118,14 @@ int main() {
 	SetTargetFPS(60);
 
 	//load a sprite
-	Entity entity = loadEntity("assets/pacman.png", (Rectangle){0,0,16,16});
+	Entity entity = loadEntity("assets/parvati.png", (Rectangle){0,0,32,32});
 
 	while (!WindowShouldClose()) {
 		//input
-		if (IsKeyDown(KEY_UP)) entity.position.y -= 10.0f;
-		if (IsKeyDown(KEY_DOWN)) entity.position.y += 10.0f;
-		if (IsKeyDown(KEY_LEFT)) entity.position.x -= 10.0f;
-		if (IsKeyDown(KEY_RIGHT)) entity.position.x += 10.0f;
+		if (IsKeyDown(KEY_UP)) entity.position.y -= 5.0f;
+		if (IsKeyDown(KEY_DOWN)) entity.position.y += 5.0f;
+		if (IsKeyDown(KEY_LEFT)) entity.position.x -= 5.0f;
+		if (IsKeyDown(KEY_RIGHT)) entity.position.x += 5.0f;
 
 		//drawing
 		BeginDrawing();

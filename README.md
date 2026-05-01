@@ -14,6 +14,6 @@ cmake --build build
 cd build && sudo make install
 ```
 
-## Asset Sources
+## Asset Credits
 
-https://www.spriters-resource.com/arcade/pacman/asset/52631/
+"Parvati" by LogicMonkey.
