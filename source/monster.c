@@ -205,8 +205,15 @@ void freeMonsterObjectPool(Toy_VM* vm) {
 	monsterArray = Toy_resizeArray(monsterArray, 0);
 }
 
-void drawMonsterPool(Toy_VM* vm) {
+void drawMonsters(Toy_VM* vm) {
 	(void)vm;
+
+	//check for initialization
+	if (spriteTable == NULL || monsterArray == NULL) {
+		fprintf(stderr, TOY_CC_ERROR "ERROR: Object pool for monster system hasn't been initialized" TOY_CC_RESET "\n");
+		return;
+	}
+
 	for (unsigned int i = 0; i < monsterArray->count; i++) {
 		MonsterData* monster = (MonsterData*)TOY_VALUE_AS_OPAQUE(monsterArray->data[i]);
 

@@ -6,4 +6,4 @@
 void initMonsterObjectPool(Toy_VM* vm);
 void freeMonsterObjectPool(Toy_VM* vm);
 
-void drawMonsterPool(Toy_VM* vm);
+void drawMonsters(Toy_VM* vm);

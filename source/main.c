@@ -89,7 +89,7 @@ void unloadPlayerData(PlayerData player) {
 int main() {
 	//example Toy controlling the window stuff
 	int size = 0;
-	const char* source = (char*)readFile("assets/config.toy", &size);
+	const char* source = (char*)readFile("assets/main.toy", &size);
 
 	if (!source) {
 		fprintf(stderr, "File read error: %d\n", size);
@@ -152,7 +152,7 @@ int main() {
 		//draw the player
 		DrawTextureRec(player.texture, player.rect, player.position, WHITE);
 
-		drawMonsterPool(&vm);
+		drawMonsters(&vm);
 
 		DrawFPS(0,0);
 		EndDrawing();
