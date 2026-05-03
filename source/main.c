@@ -66,6 +66,101 @@ unsigned char* makeCodeFromSource(const char* source) {
 	return code;
 }
 
+//static pointers
+static Toy_Function* onReady = NULL;
+static Toy_Function* onStep = NULL;
+static Toy_Function* onClose = NULL;
+
+//game API definitions
+void initScreen(Toy_VM* vm) {
+	Toy_Value caption = Toy_popStack(&vm->stack);
+	Toy_Value height = Toy_popStack(&vm->stack);
+	Toy_Value width = Toy_popStack(&vm->stack);
+
+	if (!TOY_VALUE_IS_STRING(caption) || TOY_VALUE_AS_STRING(caption)->info.type != TOY_STRING_LEAF || !TOY_VALUE_IS_INTEGER(height) || !TOY_VALUE_IS_INTEGER(width)) {
+		fprintf(stderr, TOY_CC_ERROR "ERROR: Bad types found in 'initScreen', exiting" TOY_CC_RESET "\n");
+		exit(-1);
+	}
+
+	//setup raylib
+	InitWindow(TOY_VALUE_AS_INTEGER(width), TOY_VALUE_AS_INTEGER(height), TOY_VALUE_AS_STRING(caption)->leaf.data);
+	SetTargetFPS(60);
+
+	Toy_freeValue(width);
+	Toy_freeValue(height);
+	Toy_freeValue(caption);
+}
+
+void initLoop(Toy_VM* vm) {
+	Toy_Value valueOnClose = Toy_popStack(&vm->stack);
+	Toy_Value valueOnStep = Toy_popStack(&vm->stack);
+	Toy_Value valueOnReady = Toy_popStack(&vm->stack);
+
+	if (!TOY_VALUE_IS_FUNCTION(valueOnClose) && !TOY_VALUE_IS_NULL(valueOnClose)) {
+		fprintf(stderr, TOY_CC_ERROR "ERROR: Bad types found in 'initLoop', exiting" TOY_CC_RESET "\n");
+		exit(-1);
+	}
+
+	if (!TOY_VALUE_IS_FUNCTION(valueOnStep) && !TOY_VALUE_IS_NULL(valueOnStep)) {
+		fprintf(stderr, TOY_CC_ERROR "ERROR: Bad types found in 'initLoop', exiting" TOY_CC_RESET "\n");
+		exit(-1);
+	}
+
+	if (!TOY_VALUE_IS_FUNCTION(valueOnReady) && !TOY_VALUE_IS_NULL(valueOnReady)) {
+		fprintf(stderr, TOY_CC_ERROR "ERROR: Bad types found in 'initLoop', exiting" TOY_CC_RESET "\n");
+		exit(-1);
+	}
+
+	if (TOY_VALUE_IS_FUNCTION(valueOnReady)) {
+		if (TOY_VALUE_AS_FUNCTION(valueOnReady)->type != TOY_FUNCTION_CUSTOM) {
+			fprintf(stderr, TOY_CC_ERROR "ERROR: Bad function found in 'initLoop', exiting (only allows custom functions or null)" TOY_CC_RESET "\n");
+			exit(-1);
+		}
+		onReady = TOY_VALUE_AS_FUNCTION(valueOnReady);
+	}
+	if (TOY_VALUE_IS_FUNCTION(valueOnStep)) {
+		if (TOY_VALUE_AS_FUNCTION(valueOnStep)->type != TOY_FUNCTION_CUSTOM) {
+			fprintf(stderr, TOY_CC_ERROR "ERROR: Bad function found in 'initLoop', exiting (only allows custom functions or null)" TOY_CC_RESET "\n");
+			exit(-1);
+		}
+		onStep = TOY_VALUE_AS_FUNCTION(valueOnStep);
+	}
+	if (TOY_VALUE_IS_FUNCTION(valueOnClose)) {
+		if (TOY_VALUE_AS_FUNCTION(valueOnClose)->type != TOY_FUNCTION_CUSTOM) {
+			fprintf(stderr, TOY_CC_ERROR "ERROR: Bad function found in 'initLoop', exiting (only allows custom functions or null)" TOY_CC_RESET "\n");
+			exit(-1);
+		}
+		onClose = TOY_VALUE_AS_FUNCTION(valueOnClose);
+	}
+}
+
+//game API tools
+typedef struct CallbackPairs {
+	const char* name;
+	Toy_nativeCallback callback;
+} CallbackPairs;
+
+static CallbackPairs callbackPairs[] = {
+	{"initScreen", initScreen},
+	{"initLoop", initLoop},
+	{NULL, NULL},
+};
+
+void initGameAPI(Toy_VM* vm) {
+	if (vm == NULL || vm->scope == NULL || vm->memoryBucket == NULL) {
+		fprintf(stderr, TOY_CC_ERROR "ERROR: Can't initialize game API, exiting\n" TOY_CC_RESET);
+		exit(-1);
+	}
+
+	//declare each function in the global scope
+	for (int i = 0; callbackPairs[i].name; i++) {
+		Toy_String* key = Toy_toString(&(vm->memoryBucket), callbackPairs[i].name);
+		Toy_Function* fn = Toy_createFunctionFromCallback(&(vm->memoryBucket), callbackPairs[i].callback);
+		Toy_declareScope(vm->scope, key, TOY_VALUE_FUNCTION, TOY_VALUE_FROM_FUNCTION(fn), true);
+		Toy_freeString(key);
+	}
+}
+
 //player data
 typedef struct PlayerData {
 	Texture2D texture;
@@ -76,8 +171,10 @@ typedef struct PlayerData {
 
 PlayerData loadPlayerData(const char* fileName, Rectangle rect) {
 	PlayerData player = {0};
-	player.texture = LoadTexture(fileName);
-	player.rect = rect;
+	if (IsWindowReady()) {
+		player.texture = LoadTexture(fileName);
+		player.rect = rect;
+	}
 	return player;
 }
 
@@ -87,7 +184,7 @@ void unloadPlayerData(PlayerData player) {
 
 //main file
 int main() {
-	//example Toy controlling the window stuff
+	//load the entry point
 	int size = 0;
 	const char* source = (char*)readFile("assets/main.toy", &size);
 
@@ -96,44 +193,31 @@ int main() {
 		return -1;
 	}
 
-	unsigned char* configCode = makeCodeFromSource(source);
-	unsigned char* invokeOnReady = makeCodeFromSource("onReady();");
-	unsigned char* invokeOnStep = makeCodeFromSource("onStep();");
-	unsigned char* invokeOnFinished = makeCodeFromSource("onFinished();");
+	unsigned char* entryCode = makeCodeFromSource(source);
 
-	//build and run the VM
+	//build and run the VM with APIs
 	Toy_VM vm;
 	Toy_initVM(&vm);
-	Toy_bindVM(&vm, configCode, NULL);
+	Toy_bindVM(&vm, entryCode, NULL);
+	initGameAPI(&vm);
+	initMonsterAPI(&vm);
 	Toy_runVM(&vm);
-	Toy_resetVM(&vm, true, false); //leave it in a valid, but unset state
-
-	//extract the settings
-	Toy_Value* screenWidthPtr = Toy_accessScopeAsPointer(vm.scope, Toy_toString(&vm.memoryBucket, "screenWidth") );
-	Toy_Value* screenHeightPtr = Toy_accessScopeAsPointer(vm.scope, Toy_toString(&vm.memoryBucket, "screenHeight") );
-	Toy_Value* screenCaptionPtr = Toy_accessScopeAsPointer(vm.scope, Toy_toString(&vm.memoryBucket, "screenCaption") );
-
-	int screenWidth = screenWidthPtr != NULL && TOY_VALUE_IS_INTEGER(*screenWidthPtr) ? TOY_VALUE_AS_INTEGER(*screenWidthPtr) : 640;
-	int screenHeight = screenHeightPtr != NULL && TOY_VALUE_IS_INTEGER(*screenHeightPtr) ? TOY_VALUE_AS_INTEGER(*screenHeightPtr) : 480;
-	const char* screenCaption = screenCaptionPtr != NULL && TOY_VALUE_IS_STRING(*screenCaptionPtr) ? TOY_VALUE_AS_STRING(*screenCaptionPtr)->leaf.data : "";
-
-	//setup raylib
-	InitWindow(screenWidth, screenHeight, screenCaption);
-	SetTargetFPS(60);
+	Toy_resetVM(&vm, false, false); //leave in a valid, but unset state
 
 	//load a sprite
 	PlayerData player = loadPlayerData("assets/parvati.png", (Rectangle){0,0,32,32});
 
-	//initialize the monster object pool and run the setup function
-	initMonsterObjectPool(&vm);
-
-	//setup
-	Toy_bindVM(&vm, invokeOnReady, NULL);
-	Toy_runVM(&vm);
-	Toy_resetVM(&vm, true, false);
+	//setup and run the given loop functions
+	if (onReady != NULL) {
+		Toy_bindVM(&vm, onReady->bytecode.code, onReady->bytecode.parentScope);
+		Toy_runVM(&vm);
+		Toy_resetVM(&vm, false, false);
+	}
 
 	//onStep is called each frame
-	Toy_bindVM(&vm, invokeOnStep, NULL);
+	if (onStep != NULL) {
+		Toy_bindVM(&vm, onStep->bytecode.code, onStep->bytecode.parentScope);
+	}
 
 	while (!WindowShouldClose()) {
 		//input
@@ -143,7 +227,7 @@ int main() {
 		if (IsKeyDown(KEY_RIGHT)) player.position.x += 5.0f;
 
 		//run the onStep function
-		Toy_runVM(&vm);
+		Toy_runVM(&vm); //no check needed, empty VMs are skipped
 
 		//drawing
 		BeginDrawing();
@@ -159,23 +243,26 @@ int main() {
 	}
 
 	//clear onStep
-	Toy_resetVM(&vm, true, false);
+	if (onStep != NULL) {
+		Toy_resetVM(&vm, false, false);
+	}
 
 	//cleanup
-	Toy_bindVM(&vm, invokeOnFinished, NULL);
-	Toy_runVM(&vm);
-	Toy_resetVM(&vm, true, false);
+	if (onClose != NULL) {
+		Toy_bindVM(&vm, onClose->bytecode.code, onClose->bytecode.parentScope);
+		Toy_runVM(&vm);
+		Toy_resetVM(&vm, false, false);
+	}
 
-	freeMonsterObjectPool(&vm);
+	freeMonsterAPI(&vm);
 	unloadPlayerData(player);
 
-	CloseWindow();
+	if (IsWindowReady()) {
+		CloseWindow();
+	}
 
 	Toy_freeVM(&vm);
-	free(invokeOnReady);
-	free(invokeOnStep);
-	free(invokeOnFinished);
-	free(configCode);
+	free(entryCode);
 
 	return 0;
 }

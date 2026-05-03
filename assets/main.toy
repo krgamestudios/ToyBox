@@ -1,16 +1,11 @@
-var screenWidth = 1280;
-var screenHeight = 720;
-var screenCaption = "Hello raylib from Toy!";
-
+//"global" variables
 var frameCounter: Int = 0;
 var posCounter: Int = 0;
 
-//this runs before the game starts
 fn onReady() {
 	loadMonsterSprite("parvati", "assets/parvati.png", 32, 32);
 }
 
-//this runs each frame
 fn onStep() {
 	frameCounter++;
 
@@ -20,7 +15,10 @@ fn onStep() {
 	}
 }
 
-//this runs as the game is closing down
-fn onFinished() {
+fn onClose() {
 	//
 }
+
+//example API for the game
+initScreen(1280, 720, "Hello raylib from Toy!");
+initLoop(onReady, onStep, onClose);

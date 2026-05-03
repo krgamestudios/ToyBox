@@ -31,6 +31,11 @@ static Toy_Array* monsterArray = NULL;
 static void loadMonsterSprite(Toy_VM* vm) {
 	//key, file, width, height -> null
 
+	if (!IsWindowReady()) {
+		fprintf(stderr, TOY_CC_ERROR "ERROR: Can't load monster sprites before the window has been initialized" TOY_CC_RESET "\n");
+		return;
+	}
+
 	//check for initialization
 	if (spriteTable == NULL || monsterArray == NULL) {
 		fprintf(stderr, TOY_CC_ERROR "ERROR: Object pool for monster system hasn't been initialized" TOY_CC_RESET "\n");
@@ -114,7 +119,11 @@ static void spawnMonsterAt(Toy_VM* vm) {
 	//get the sprite
 	Toy_Value spriteValue = Toy_lookupTable(&spriteTable, key);
 	if (TOY_VALUE_IS_NULL(spriteValue)) {
-		fprintf(stderr, TOY_CC_ERROR "ERROR: Can't spawn a monster with a non-existant sprite" TOY_CC_RESET "\n");
+		Toy_String* string = Toy_stringifyValue(&(vm->memoryBucket), key);
+		char* cstr = Toy_getStringRaw(string);
+		fprintf(stderr, TOY_CC_ERROR "ERROR: Can't spawn a monster with a non-existant sprite '%s'" TOY_CC_RESET "\n", cstr);
+		free(cstr);
+		Toy_freeString(string);
 		Toy_freeValue(key);
 		Toy_freeValue(xpos);
 		Toy_freeValue(ypos);
@@ -160,7 +169,7 @@ typedef struct CallbackPairs {
 	Toy_nativeCallback callback;
 } CallbackPairs;
 
-CallbackPairs callbackPairs[] = {
+static CallbackPairs callbackPairs[] = {
 	{"loadMonsterSprite", loadMonsterSprite},
 	{"spawnMonsterAt", spawnMonsterAt},
 
@@ -168,7 +177,7 @@ CallbackPairs callbackPairs[] = {
 };
 
 //exposed
-void initMonsterObjectPool(Toy_VM* vm) {
+void initMonsterAPI(Toy_VM* vm) {
 	if (vm == NULL || vm->scope == NULL || vm->memoryBucket == NULL) {
 		fprintf(stderr, TOY_CC_ERROR "ERROR: Can't initialize standard library, exiting\n" TOY_CC_RESET);
 		exit(-1);
@@ -189,7 +198,7 @@ void initMonsterObjectPool(Toy_VM* vm) {
 	monsterArray = Toy_resizeArray(NULL, TOY_ARRAY_INITIAL_CAPACITY);
 }
 
-void freeMonsterObjectPool(Toy_VM* vm) {
+void freeMonsterAPI(Toy_VM* vm) {
 	(void)vm;
 
 	//free the GL textures
