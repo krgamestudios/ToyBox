@@ -89,7 +89,7 @@ void unloadPlayerData(PlayerData player) {
 int main() {
 	//example Toy controlling the window stuff
 	int size = 0;
-	const char* source = (char*)readFile("config.toy", &size);
+	const char* source = (char*)readFile("assets/config.toy", &size);
 
 	if (!source) {
 		fprintf(stderr, "File read error: %d\n", size);
