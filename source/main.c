@@ -6,6 +6,7 @@
 #include "toy_parser.h"
 #include "toy_compiler.h"
 #include "toy_vm.h"
+#include "toy_attributes.h"
 
 #include "monster.h"
 
@@ -85,6 +86,11 @@ void initScreen(Toy_VM* vm) {
 	//setup raylib
 	InitWindow(TOY_VALUE_AS_INTEGER(width), TOY_VALUE_AS_INTEGER(height), TOY_VALUE_AS_STRING(caption)->leaf.data);
 	SetTargetFPS(60);
+
+	if (!IsWindowReady()) {
+		fprintf(stderr, TOY_CC_ERROR "ERROR: raylib failed to init the window, exiting" TOY_CC_RESET "\n");
+		exit(-1);
+	}
 
 	Toy_freeValue(width);
 	Toy_freeValue(height);
@@ -199,8 +205,11 @@ int main() {
 	Toy_VM vm;
 	Toy_initVM(&vm);
 	Toy_bindVM(&vm, entryCode, NULL);
+
 	initGameAPI(&vm);
 	initMonsterAPI(&vm);
+	Toy_setOpaqueAttributeHandler(handleMonsterAttributes);
+
 	Toy_runVM(&vm);
 	Toy_resetVM(&vm, false, false); //leave in a valid, but unset state
 
@@ -225,6 +234,9 @@ int main() {
 		if (IsKeyDown(KEY_DOWN)) player.position.y += 5.0f;
 		if (IsKeyDown(KEY_LEFT)) player.position.x -= 5.0f;
 		if (IsKeyDown(KEY_RIGHT)) player.position.x += 5.0f;
+
+		//process the monsters (if possible)
+		processMonsterStep(&vm);
 
 		//run the onStep function
 		Toy_runVM(&vm); //no check needed, empty VMs are skipped

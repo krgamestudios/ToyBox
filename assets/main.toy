@@ -3,14 +3,14 @@ var frameCounter: Int = 0;
 var posCounter: Int = 0;
 
 fn onReady() {
-	loadMonsterSprite("parvati", "assets/parvati.png", 32, 32);
+	loadMonsterSprite("monster", "assets/parvati.png", 32, 32);
 }
 
 fn onStep() {
 	frameCounter++;
 
 	if (frameCounter % 100 == 0) {
-		spawnMonsterAt("parvati", posCounter*50, posCounter*50);
+		spawnMonsterAt("monster", posCounter*50, posCounter*50);
 		posCounter++;
 	}
 }
@@ -22,3 +22,10 @@ fn onClose() {
 //example API for the game
 initScreen(1280, 720, "Hello raylib from Toy!");
 initLoop(onReady, onStep, onClose);
+
+//test
+fn brains(monster: Opaque) {
+	monster.setX(monster.x + 1);
+}
+
+setMonsterStep(brains);

@@ -9,6 +9,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 //sprites loaded from disk
 typedef struct MonsterSprite {
@@ -26,6 +27,7 @@ typedef struct MonsterData {
 //static storage
 static Toy_Table* spriteTable = NULL;
 static Toy_Array* monsterArray = NULL;
+static Toy_Function* monsterStep = NULL;
 
 //callbacks
 static void loadMonsterSprite(Toy_VM* vm) {
@@ -163,6 +165,23 @@ static void spawnMonsterAt(Toy_VM* vm) {
 	};
 }
 
+static void setMonsterStep(Toy_VM* vm) {
+	Toy_Value value = Toy_popStack(&vm->stack);
+
+	if (!TOY_VALUE_IS_FUNCTION(value) && !TOY_VALUE_IS_NULL(value)) {
+		fprintf(stderr, TOY_CC_ERROR "ERROR: Bad argument type found in 'setMonsterStep', exiting" TOY_CC_RESET "\n");
+		exit(-1);
+	}
+
+	if (TOY_VALUE_IS_FUNCTION(value)) {
+		if (TOY_VALUE_AS_FUNCTION(value)->type != TOY_FUNCTION_CUSTOM) {
+			fprintf(stderr, TOY_CC_ERROR "ERROR: Bad function found in 'setMonsterStep', exiting (only allows custom functions or null)" TOY_CC_RESET "\n");
+			exit(-1);
+		}
+		monsterStep = TOY_VALUE_AS_FUNCTION(value);
+	}
+}
+
 //callback utils
 typedef struct CallbackPairs {
 	const char* name;
@@ -172,6 +191,7 @@ typedef struct CallbackPairs {
 static CallbackPairs callbackPairs[] = {
 	{"loadMonsterSprite", loadMonsterSprite},
 	{"spawnMonsterAt", spawnMonsterAt},
+	{"setMonsterStep", setMonsterStep},
 
 	{NULL, NULL},
 };
@@ -214,6 +234,48 @@ void freeMonsterAPI(Toy_VM* vm) {
 	monsterArray = Toy_resizeArray(monsterArray, 0);
 }
 
+void processMonsterStep(Toy_VM* vm) {
+	//check for initialization
+	if (spriteTable == NULL || monsterArray == NULL) {
+		fprintf(stderr, TOY_CC_ERROR "ERROR: Object pool for monster system hasn't been initialized" TOY_CC_RESET "\n");
+		return;
+	}
+
+	if (monsterStep == NULL) {
+		return; //no-op
+	}
+
+	//BUG: invoking a callback with a parameter is process-heavy
+
+	//bind a sub-vm
+	Toy_VM subVM;
+	Toy_inheritVM(vm, &subVM);
+	Toy_bindVM(&subVM, monsterStep->bytecode.code, monsterStep->bytecode.parentScope);
+
+	//paramAddr is relative to the data section, and is followed by the param type
+	unsigned int paramAddr = ((unsigned int*)(subVM.code + subVM.paramAddr))[0];
+	Toy_ValueType paramType = (Toy_ValueType)(((unsigned int*)(subVM.code + subVM.paramAddr))[1]);
+
+	//c-string of the param's name && as a name string
+	const char* cstr = ((char*)(subVM.code + subVM.dataAddr)) + paramAddr;
+	Toy_String* name = Toy_toStringLength(&subVM.memoryBucket, cstr, strlen(cstr));
+
+	//load each valid monster and process them one at a time
+	for (unsigned int i = 0; i < monsterArray->count; i++) {
+		MonsterData* monster = (MonsterData*)TOY_VALUE_AS_OPAQUE(monsterArray->data[i]);
+		if (monster->health > 0) {
+			subVM.scope = Toy_pushScope(&subVM.memoryBucket, subVM.scope);
+
+			Toy_declareScope(subVM.scope, name, paramType, Toy_copyValue(&subVM.memoryBucket, monsterArray->data[i]), true);
+			Toy_runVM(&subVM);
+
+			subVM.scope = Toy_popScope(subVM.scope);
+		}
+	}
+
+	Toy_freeVM(&subVM);
+}
+
 void drawMonsters(Toy_VM* vm) {
 	(void)vm;
 
@@ -229,5 +291,70 @@ void drawMonsters(Toy_VM* vm) {
 		if (monster->health > 0) {
 			DrawTextureRec(monster->sprite->texture, monster->sprite->rect, monster->position, WHITE);
 		}
+	}
+}
+
+static void attr_monsterSetX(Toy_VM* vm) {
+	Toy_Value compound = Toy_popStack(&vm->stack);
+	Toy_Value x = Toy_popStack(&vm->stack);
+
+	if (!TOY_VALUE_IS_INTEGER(x)) {
+		fprintf(stderr, TOY_CC_ERROR "ERROR: Bad argument type in MonsterData.setX() (expected 'Int', found '%s')" TOY_CC_RESET "\n", Toy_getValueTypeAsCString(x.type));
+	}
+
+	MonsterData* monster = (MonsterData*)TOY_VALUE_AS_OPAQUE(compound);
+
+	monster->position.x = TOY_VALUE_AS_INTEGER(x);
+}
+
+static void attr_monsterSetY(Toy_VM* vm) {
+	Toy_Value compound = Toy_popStack(&vm->stack);
+	Toy_Value y = Toy_popStack(&vm->stack);
+
+	if (!TOY_VALUE_IS_INTEGER(y)) {
+		fprintf(stderr, TOY_CC_ERROR "ERROR: Bad argument type in MonsterData.setY() (expected 'Int', found '%s')" TOY_CC_RESET "\n", Toy_getValueTypeAsCString(y.type));
+	}
+
+	MonsterData* monster = (MonsterData*)TOY_VALUE_AS_OPAQUE(compound);
+
+	monster->position.y = TOY_VALUE_AS_INTEGER(y);
+}
+
+Toy_Value handleMonsterAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attribute) {
+	//check for initialization
+	if (spriteTable == NULL || monsterArray == NULL) {
+		fprintf(stderr, TOY_CC_ERROR "ERROR: Object pool for monster system hasn't been initialized" TOY_CC_RESET "\n");
+		return TOY_VALUE_FROM_NULL();
+	}
+
+	//check for correct types
+	if (!TOY_VALUE_IS_OPAQUE(compound) || !TOY_VALUE_IS_STRING(attribute) || TOY_VALUE_AS_STRING(attribute)->info.type != TOY_STRING_LEAF) {
+		fprintf(stderr, TOY_CC_ERROR "ERROR: Bad parameters found in 'handleMonsterAttributes'" TOY_CC_RESET "\n");
+		return TOY_VALUE_FROM_NULL(); //do not free the params here
+	}
+
+	MonsterData* monster = (MonsterData*)TOY_VALUE_AS_OPAQUE(compound);
+
+
+	if (TOY_VALUE_AS_STRING(attribute)->info.length == 1 && strncmp(TOY_VALUE_AS_STRING(attribute)->leaf.data, "x", 1)  == 0) {
+		return TOY_VALUE_FROM_INTEGER(monster->position.x);
+	}
+	else if (TOY_VALUE_AS_STRING(attribute)->info.length == 1 && strncmp(TOY_VALUE_AS_STRING(attribute)->leaf.data, "y", 1)  == 0) {
+		return TOY_VALUE_FROM_INTEGER(monster->position.y);
+	}
+	else if (TOY_VALUE_AS_STRING(attribute)->info.length == 4 && strncmp(TOY_VALUE_AS_STRING(attribute)->leaf.data, "setX", 4)  == 0) {
+		Toy_Function* fn = Toy_createFunctionFromCallback(&vm->memoryBucket, attr_monsterSetX);
+		return TOY_VALUE_FROM_FUNCTION(fn);
+	}
+	else if (TOY_VALUE_AS_STRING(attribute)->info.length == 4 && strncmp(TOY_VALUE_AS_STRING(attribute)->leaf.data, "setY", 4)  == 0) {
+		Toy_Function* fn = Toy_createFunctionFromCallback(&vm->memoryBucket, attr_monsterSetY);
+		return TOY_VALUE_FROM_FUNCTION(fn);
+	}
+
+	else {
+		char buffer[256];
+		snprintf(buffer, 256, "Unknown attribute '%s' of type MonsterData (an Opaque)", TOY_VALUE_AS_STRING(attribute)->leaf.data);
+		Toy_error(buffer);
+		return TOY_VALUE_FROM_NULL();
 	}
 }
