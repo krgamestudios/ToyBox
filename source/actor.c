@@ -89,7 +89,12 @@ static void loadSprite(Toy_VM* vm) {
 	}
 
 	//insert into the table as an opaque
-	Toy_insertTable(&spriteTable, key, TOY_OPAQUE_FROM_POINTER(sprite));
+	Toy_insertTable(&spriteTable, Toy_copyValue(&vm->memoryBucket, key), TOY_OPAQUE_FROM_POINTER(sprite));
+
+	Toy_freeValue(key);
+	Toy_freeValue(file);
+	Toy_freeValue(width);
+	Toy_freeValue(height);
 }
 
 static void spawnActorAt(Toy_VM* vm) {
@@ -165,6 +170,11 @@ static void spawnActorAt(Toy_VM* vm) {
 		.position = { TOY_VALUE_AS_INTEGER(xpos), TOY_VALUE_AS_INTEGER(ypos) },
 		.health = 10,
 	};
+
+	Toy_freeValue(spriteValue);
+	Toy_freeValue(key);
+	Toy_freeValue(xpos);
+	Toy_freeValue(ypos);
 }
 
 static void setActorStep(Toy_VM* vm) {
@@ -172,15 +182,17 @@ static void setActorStep(Toy_VM* vm) {
 
 	if (!TOY_VALUE_IS_FUNCTION(value) && !TOY_VALUE_IS_NULL(value)) {
 		fprintf(stderr, TOY_CC_ERROR "ERROR: Bad argument type found in 'setActorStep', exiting" TOY_CC_RESET "\n");
+		Toy_freeValue(value);
 		exit(-1);
 	}
 
 	if (TOY_VALUE_IS_FUNCTION(value)) {
 		if (TOY_VALUE_AS_FUNCTION(value)->type != TOY_FUNCTION_CUSTOM) {
 			fprintf(stderr, TOY_CC_ERROR "ERROR: Bad function found in 'setActorStep', exiting (only allows custom functions or null)" TOY_CC_RESET "\n");
+			Toy_freeValue(value);
 			exit(-1);
 		}
-		actorStep = TOY_VALUE_AS_FUNCTION(value);
+		actorStep = TOY_VALUE_AS_FUNCTION(value); //do not free, it'll be needed
 	}
 }
 
@@ -234,8 +246,11 @@ void freeActorAPI(Toy_VM* vm) {
 
 	Toy_freeTable(spriteTable);
 	spriteTable = NULL;
-	
+
 	actorArray = Toy_resizeArray(actorArray, 0);
+
+	Toy_freeFunction(actorStep);
+	actorStep = NULL;
 }
 
 void processActorStep(Toy_VM* vm) {
@@ -264,10 +279,13 @@ void processActorStep(Toy_VM* vm) {
 	const char* cstr = ((char*)(subVM.code + subVM.dataAddr)) + paramAddr;
 	Toy_String* name = Toy_toStringLength(&subVM.memoryBucket, cstr, strlen(cstr));
 
+	int ticker = 0;
+
 	//load each valid actor and process them one at a time
 	for (unsigned int i = 0; i < actorArray->count; i++) {
 		ActorData* actor = (ActorData*)TOY_VALUE_AS_OPAQUE(actorArray->data[i]);
 		if (actor->health > 0) {
+			ticker++;
 			subVM.scope = Toy_pushScope(&subVM.memoryBucket, subVM.scope);
 
 			Toy_declareScope(subVM.scope, name, paramType, Toy_copyValue(&subVM.memoryBucket, actorArray->data[i]), true);
@@ -278,6 +296,14 @@ void processActorStep(Toy_VM* vm) {
 	}
 
 	Toy_freeVM(&subVM);
+
+	//DEBUG: "wipe" the actors if there's too many, so memory doesn't keep growing.
+	if (ticker >= 100) {
+		for (unsigned int i = 0; i < actorArray->count; i++) {
+			ActorData* actor = (ActorData*)TOY_VALUE_AS_OPAQUE(actorArray->data[i]);
+			actor->health = 0;
+		}
+	}
 }
 
 void drawActors(Toy_VM* vm) {
@@ -339,7 +365,6 @@ Toy_Value handleActorAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attrib
 	}
 
 	ActorData* actor = (ActorData*)TOY_VALUE_AS_OPAQUE(compound);
-
 
 	if (TOY_VALUE_AS_STRING(attribute)->info.length == 1 && strncmp(TOY_VALUE_AS_STRING(attribute)->leaf.data, "x", 1)  == 0) {
 		return TOY_VALUE_FROM_INTEGER(actor->position.x);

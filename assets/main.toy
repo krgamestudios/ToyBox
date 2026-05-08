@@ -9,9 +9,13 @@ fn onReady() {
 fn onStep() {
 	frameCounter++;
 
-	if (frameCounter % 100 == 0) {
-		spawnActorAt("zombie", posCounter*50, posCounter*50);
+//	if (frameCounter % 10 == 0) {
+		spawnActorAt("zombie", posCounter*5, posCounter*5);
 		posCounter++;
+//	}
+
+	if (posCounter > 150) {
+		posCounter = 0;
 	}
 }
 
