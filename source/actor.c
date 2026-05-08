@@ -1,4 +1,4 @@
-#include "monster.h"
+#include "actor.h"
 
 #include "toy_console_colors.h"
 #include "toy_table.h"

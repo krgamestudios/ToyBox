@@ -8,7 +8,7 @@
 #include "toy_vm.h"
 #include "toy_attributes.h"
 
-#include "monster.h"
+#include "actor.h"
 
 #include <stdio.h>
 #include <stdlib.h>
