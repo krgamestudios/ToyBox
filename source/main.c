@@ -167,27 +167,6 @@ void initGameAPI(Toy_VM* vm) {
 	}
 }
 
-//player data
-typedef struct PlayerData {
-	Texture2D texture;
-	Rectangle rect;
-	Vector2 position;
-	//TODO: hitbox, hurtbox, motion, etc.
-} PlayerData;
-
-PlayerData loadPlayerData(const char* fileName, Rectangle rect) {
-	PlayerData player = {0};
-	if (IsWindowReady()) {
-		player.texture = LoadTexture(fileName);
-		player.rect = rect;
-	}
-	return player;
-}
-
-void unloadPlayerData(PlayerData player) {
-	UnloadTexture(player.texture);
-}
-
 //main file
 int main() {
 	//load the entry point
@@ -207,14 +186,11 @@ int main() {
 	Toy_bindVM(&vm, entryCode, NULL);
 
 	initGameAPI(&vm);
-	initMonsterAPI(&vm);
-	Toy_setOpaqueAttributeHandler(handleMonsterAttributes);
+	initActorAPI(&vm);
+	Toy_setOpaqueAttributeHandler(handleActorAttributes);
 
 	Toy_runVM(&vm);
 	Toy_resetVM(&vm, false, false); //leave in a valid, but unset state
-
-	//load a sprite
-	PlayerData player = loadPlayerData("assets/parvati.png", (Rectangle){0,0,32,32});
 
 	//setup and run the given loop functions
 	if (onReady != NULL) {
@@ -229,14 +205,14 @@ int main() {
 	}
 
 	while (!WindowShouldClose()) {
-		//input
-		if (IsKeyDown(KEY_UP)) player.position.y -= 5.0f;
-		if (IsKeyDown(KEY_DOWN)) player.position.y += 5.0f;
-		if (IsKeyDown(KEY_LEFT)) player.position.x -= 5.0f;
-		if (IsKeyDown(KEY_RIGHT)) player.position.x += 5.0f;
+		//TODO: player input
+		// if (IsKeyDown(KEY_UP)) player.position.y -= 5.0f;
+		// if (IsKeyDown(KEY_DOWN)) player.position.y += 5.0f;
+		// if (IsKeyDown(KEY_LEFT)) player.position.x -= 5.0f;
+		// if (IsKeyDown(KEY_RIGHT)) player.position.x += 5.0f;
 
-		//process the monsters (if possible)
-		processMonsterStep(&vm);
+		//process the actors (if possible)
+		processActorStep(&vm);
 
 		//run the onStep function
 		Toy_runVM(&vm); //no check needed, empty VMs are skipped
@@ -244,12 +220,7 @@ int main() {
 		//drawing
 		BeginDrawing();
 		ClearBackground(RAYWHITE);
-
-		//draw the player
-		DrawTextureRec(player.texture, player.rect, player.position, WHITE);
-
-		drawMonsters(&vm);
-
+		drawActors(&vm);
 		DrawFPS(0,0);
 		EndDrawing();
 	}
@@ -266,15 +237,14 @@ int main() {
 		Toy_resetVM(&vm, false, false);
 	}
 
-	freeMonsterAPI(&vm);
-	unloadPlayerData(player);
+	freeActorAPI(&vm);
+
+	Toy_freeVM(&vm);
+	free(entryCode);
 
 	if (IsWindowReady()) {
 		CloseWindow();
 	}
-
-	Toy_freeVM(&vm);
-	free(entryCode);
 
 	return 0;
 }
