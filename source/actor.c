@@ -5,26 +5,9 @@
 #include "toy_array.h"
 #include "toy_string.h"
 
-#include "raylib.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-//sprites loaded from disk
-typedef struct SpriteData {
-	Texture2D texture;
-	Rectangle rect;
-	//TODO: animation
-} SpriteData;
-
-//Actors loaded from scripts
-typedef struct ActorData {
-	SpriteData* sprite;
-	Vector2 position;
-	//TODO: animation
-	int health;
-} ActorData;
 
 //static storage
 static Toy_Table* spriteTable = NULL;
@@ -32,7 +15,7 @@ static Toy_Array* actorArray = NULL;
 static Toy_Function* actorStep = NULL;
 
 //callbacks
-static void loadSprite(Toy_VM* vm) {
+static void api_loadSprite(Toy_VM* vm) {
 	//key, file, width, height -> null
 
 	if (!IsWindowReady()) {
@@ -97,7 +80,7 @@ static void loadSprite(Toy_VM* vm) {
 	Toy_freeValue(height);
 }
 
-static void spawnActorAt(Toy_VM* vm) {
+static void api_spawnActorAt(Toy_VM* vm) {
 	//sprite, x, y -> void
 
 	//check for initialization
@@ -148,7 +131,7 @@ static void spawnActorAt(Toy_VM* vm) {
 		}
 	}
 
-	//find an existing spot for the new actor, overwriting a dead one
+	//find an existing spot for the new actor, overwriting a dead one if able
 	ActorData* newActorPtr = NULL;
 	for (unsigned int i = 0; i < actorArray->count; i++) {
 		ActorData* mData = (ActorData*)TOY_VALUE_AS_OPAQUE(actorArray->data[i]);
@@ -177,7 +160,7 @@ static void spawnActorAt(Toy_VM* vm) {
 	Toy_freeValue(ypos);
 }
 
-static void setActorStep(Toy_VM* vm) {
+static void api_setActorStep(Toy_VM* vm) {
 	Toy_Value value = Toy_popStack(&vm->stack);
 
 	if (!TOY_VALUE_IS_FUNCTION(value) && !TOY_VALUE_IS_NULL(value)) {
@@ -203,11 +186,11 @@ typedef struct CallbackPairs {
 } CallbackPairs;
 
 static CallbackPairs callbackPairs[] = {
-	{"loadSprite", loadSprite},
+	{"loadSprite", api_loadSprite},
 	// {"unloadSprite", unloadSprite},
-	{"spawnActorAt", spawnActorAt},
+	{"spawnActorAt", api_spawnActorAt},
 	// {"despawnActor", despawnActor},
-	{"setActorStep", setActorStep},
+	{"setActorStep", api_setActorStep},
 
 	{NULL, NULL},
 };
@@ -269,7 +252,7 @@ void processActorStep(Toy_VM* vm) {
 	//bind a sub-vm
 	Toy_VM subVM;
 	Toy_inheritVM(vm, &subVM);
-	Toy_bindVM(&subVM, actorStep->bytecode.code, actorStep->bytecode.parentScope);
+	Toy_bindVM(&subVM, actorStep->bytecode.code, actorStep->bytecode.parentScope); //TODO: each actor needs its own step function?
 
 	//paramAddr is relative to the data section, and is followed by the param type
 	unsigned int paramAddr = ((unsigned int*)(subVM.code + subVM.paramAddr))[0];
@@ -324,6 +307,99 @@ void drawActors(Toy_VM* vm) {
 	}
 }
 
+//accessors & mutators
+void loadSprite(Toy_Bucket** bucketHandle, Toy_Value key, const char* fname, int width, int height) {
+	//key, file, width, height -> null
+
+	if (!IsWindowReady()) {
+		fprintf(stderr, TOY_CC_ERROR "ERROR: Can't load actor sprites before the window has been initialized" TOY_CC_RESET "\n");
+		return;
+	}
+
+	//check for initialization
+	if (spriteTable == NULL || actorArray == NULL) {
+		fprintf(stderr, TOY_CC_ERROR "ERROR: Object pool for actor system hasn't been initialized" TOY_CC_RESET "\n");
+		return;
+	}
+
+	//check for overwriting the key
+	if ( TOY_VALUE_IS_NULL(Toy_lookupTable(&spriteTable, key)) != true ) {
+		fprintf(stderr, TOY_CC_ERROR "ERROR: Can't overwrite existing actor sprite key" TOY_CC_RESET "\n");
+		Toy_freeValue(key);
+		return;
+	}
+
+	//create the sprite stored in the bucket
+	SpriteData* sprite = (SpriteData*)Toy_partitionBucket(bucketHandle, sizeof(SpriteData));
+	sprite->rect = (Rectangle){ 0, 0, width, height };
+
+	//load the texture from a file
+	sprite->texture = LoadTexture(fname);
+
+	//insert into the table as an opaque
+	Toy_insertTable(&spriteTable, Toy_copyValue(bucketHandle, key), TOY_OPAQUE_FROM_POINTER(sprite));
+}
+
+ActorData* spawnActorAt(Toy_Bucket** bucketHandle, Toy_Value key, int xpos, int ypos) {
+	//sprite, x, y -> void
+
+	//check for initialization
+	if (spriteTable == NULL || actorArray == NULL) {
+		fprintf(stderr, TOY_CC_ERROR "ERROR: Object pool for actor system hasn't been initialized" TOY_CC_RESET "\n");
+		return NULL;
+	}
+
+	//get the sprite
+	Toy_Value spriteValue = Toy_lookupTable(&spriteTable, key);
+	if (TOY_VALUE_IS_NULL(spriteValue)) {
+		Toy_String* string = Toy_stringifyValue(bucketHandle, key);
+		char* cstr = Toy_getStringRaw(string);
+		fprintf(stderr, TOY_CC_ERROR "ERROR: Can't spawn a actor with a non-existant sprite '%s'" TOY_CC_RESET "\n", cstr);
+		free(cstr);
+		Toy_freeString(string);
+		Toy_freeValue(key);
+		return NULL;
+	}
+
+	//expand the array if needed
+	if (actorArray->count == actorArray->capacity) {
+		actorArray = Toy_resizeArray(actorArray, actorArray->capacity * TOY_ARRAY_EXPANSION_RATE);
+		//set the new entries to null values
+		for (unsigned int i = actorArray->count; i < actorArray->capacity; i++) {
+			actorArray->data[i] = TOY_VALUE_FROM_NULL();
+		}
+	}
+
+	//find an existing spot for the new actor, overwriting a dead one if able
+	ActorData* newActorPtr = NULL;
+	for (unsigned int i = 0; i < actorArray->count; i++) {
+		ActorData* mData = (ActorData*)TOY_VALUE_AS_OPAQUE(actorArray->data[i]);
+		if (mData->health <= 0) { //if this actor is dead, steal the slot
+			newActorPtr = mData;
+			break;
+		}
+	}
+
+	//if no dead actors were found, make a new slot
+	if (newActorPtr == NULL) {
+		newActorPtr = (ActorData*)Toy_partitionBucket(bucketHandle, sizeof(ActorData));
+		actorArray->data[actorArray->count++] = TOY_OPAQUE_FROM_POINTER(newActorPtr);
+	}
+
+	//finally, store the new actor's data
+	(*newActorPtr) = (ActorData){
+		.sprite = (SpriteData*)(TOY_VALUE_AS_OPAQUE(spriteValue)),
+		.position = { xpos, ypos },
+		.health = 10,
+	};
+
+	Toy_freeValue(spriteValue);
+	Toy_freeValue(key);
+
+	return newActorPtr;
+}
+
+//opaque handler
 static void attr_actorSetX(Toy_VM* vm) {
 	Toy_Value compound = Toy_popStack(&vm->stack);
 	Toy_Value x = Toy_popStack(&vm->stack);
@@ -350,7 +426,6 @@ static void attr_actorSetY(Toy_VM* vm) {
 	actor->position.y = TOY_VALUE_AS_INTEGER(y);
 }
 
-//opaque handler
 Toy_Value handleActorAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attribute) {
 	//check for initialization
 	if (spriteTable == NULL || actorArray == NULL) {
