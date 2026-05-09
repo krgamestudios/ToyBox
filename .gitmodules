@@ -1,3 +1,3 @@
 [submodule "Toy"]
 	path = Toy
-	url = git@github.com:krgamestudios/Toy.git
+	url = https://gitea.krgamestudios.com/krgamestudios/Toy.git
