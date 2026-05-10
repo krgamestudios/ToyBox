@@ -72,7 +72,7 @@ static void api_loadSprite(Toy_VM* vm) {
 	}
 
 	//insert into the table as an opaque
-	Toy_insertTable(&spriteTable, Toy_copyValue(&vm->memoryBucket, key), TOY_OPAQUE_FROM_POINTER(sprite));
+	Toy_insertTable(&spriteTable, key, TOY_OPAQUE_FROM_POINTER(sprite));
 
 	Toy_freeValue(key);
 	Toy_freeValue(file);
@@ -204,7 +204,7 @@ void initActorAPI(Toy_VM* vm) {
 
 	//declare each callback in the global scope
 	for (int i = 0; callbackPairs[i].name; i++) {
-		Toy_String* key = Toy_toString(&(vm->memoryBucket), callbackPairs[i].name);
+		Toy_String* key = Toy_createStringLength(&(vm->memoryBucket), callbackPairs[i].name, strlen(callbackPairs[i].name));
 		Toy_Function* fn = Toy_createFunctionFromCallback(&(vm->memoryBucket), callbackPairs[i].callback);
 
 		Toy_declareScope(vm->scope, key, TOY_VALUE_FUNCTION, TOY_VALUE_FROM_FUNCTION(fn), true);
@@ -260,7 +260,7 @@ void processActorStep(Toy_VM* vm) {
 
 	//c-string of the param's name && as a name string
 	const char* cstr = ((char*)(subVM.code + subVM.dataAddr)) + paramAddr;
-	Toy_String* name = Toy_toStringLength(&subVM.memoryBucket, cstr, strlen(cstr));
+	Toy_String* name = Toy_toStringLength(&subVM.memoryBucket, cstr, strlen(cstr)); //don't use 'create'
 
 	int ticker = 0;
 
@@ -279,6 +279,8 @@ void processActorStep(Toy_VM* vm) {
 	}
 
 	Toy_freeVM(&subVM);
+
+	Toy_freeString(name);
 
 	//DEBUG: "wipe" the actors if there's too many, so memory doesn't keep growing.
 	if (ticker >= 100) {
@@ -337,7 +339,7 @@ void loadSprite(Toy_Bucket** bucketHandle, Toy_Value key, const char* fname, int
 	sprite->texture = LoadTexture(fname);
 
 	//insert into the table as an opaque
-	Toy_insertTable(&spriteTable, Toy_copyValue(bucketHandle, key), TOY_OPAQUE_FROM_POINTER(sprite));
+	Toy_insertTable(&spriteTable, key, TOY_OPAQUE_FROM_POINTER(sprite));
 }
 
 ActorData* spawnActorAt(Toy_Bucket** bucketHandle, Toy_Value key, int xpos, int ypos) {

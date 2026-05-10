@@ -85,7 +85,7 @@ void initScreen(Toy_VM* vm) {
 
 	//setup raylib
 	InitWindow(TOY_VALUE_AS_INTEGER(width), TOY_VALUE_AS_INTEGER(height), TOY_VALUE_AS_STRING(caption)->leaf.data);
-	SetTargetFPS(60);
+	// SetTargetFPS(60);
 
 	if (!IsWindowReady()) {
 		fprintf(stderr, TOY_CC_ERROR "ERROR: raylib failed to init the window, exiting" TOY_CC_RESET "\n");
@@ -160,7 +160,7 @@ void initGameAPI(Toy_VM* vm) {
 
 	//declare each function in the global scope
 	for (int i = 0; callbackPairs[i].name; i++) {
-		Toy_String* key = Toy_toString(&(vm->memoryBucket), callbackPairs[i].name);
+		Toy_String* key = Toy_createStringLength(&(vm->memoryBucket), callbackPairs[i].name, strlen(callbackPairs[i].name));
 		Toy_Function* fn = Toy_createFunctionFromCallback(&(vm->memoryBucket), callbackPairs[i].callback);
 		Toy_declareScope(vm->scope, key, TOY_VALUE_FUNCTION, TOY_VALUE_FROM_FUNCTION(fn), true);
 		Toy_freeString(key);
