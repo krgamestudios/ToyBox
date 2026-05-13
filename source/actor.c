@@ -72,7 +72,7 @@ static void api_loadSprite(Toy_VM* vm) {
 	}
 
 	//insert into the table as an opaque
-	Toy_insertTable(&spriteTable, key, TOY_OPAQUE_FROM_POINTER(sprite));
+	Toy_insertTable(&spriteTable, Toy_copyValue(&vm->memoryBucket, key), TOY_OPAQUE_FROM_POINTER(sprite));
 
 	Toy_freeValue(key);
 	Toy_freeValue(file);
@@ -339,7 +339,7 @@ void loadSprite(Toy_Bucket** bucketHandle, Toy_Value key, const char* fname, int
 	sprite->texture = LoadTexture(fname);
 
 	//insert into the table as an opaque
-	Toy_insertTable(&spriteTable, key, TOY_OPAQUE_FROM_POINTER(sprite));
+	Toy_insertTable(&spriteTable, Toy_copyValue(bucketHandle, key), TOY_OPAQUE_FROM_POINTER(sprite));
 }
 
 ActorData* spawnActorAt(Toy_Bucket** bucketHandle, Toy_Value key, int xpos, int ypos) {
