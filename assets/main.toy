@@ -1,35 +1,35 @@
-//"global" variables
-var frameCounter: Int = 0;
-var posCounter: Int = 0;
 
+var counter = 0;
+var randi: Int = 69420;
+fn rand() {
+	return randi = randi * 1664525 + 1013904223; //can be negative
+}
+
+fn wander(actor: Opaque) {
+	actor.setX(actor.x + rand() % 5);
+	actor.setY(actor.y + rand() % 5);
+
+	counter++;
+}
+
+//when the game is ready, load the "zombie" sprite
 fn onReady() {
 	loadSprite("zombie", "assets/parvati.png", 32, 32);
+
+	//spawn some "zombies" looking for brains
+	spawnActorAt("zombie", wander, 250, 250);
+	spawnActorAt("zombie", wander, 250, 500);
+	spawnActorAt("zombie", wander, 500, 250);
+	spawnActorAt("zombie", wander, 500, 500);
 }
 
-fn onStep() {
-	frameCounter++;
-
-//	if (frameCounter % 10 == 0) {
-		spawnActorAt("zombie", posCounter*5, posCounter*5);
-		posCounter++;
-//	}
-
-	if (posCounter > 150) {
-		posCounter = 0;
-	}
-}
-
-fn onClose() {
-	//
+fn onFrame() {
+	//debug
+	print counter;
 }
 
 //example API for the game
-initScreen(1280, 720, "Hello raylib from Toy!");
-initLoop(onReady, onStep, onClose);
+initScreen(1280, 720, "Oh no, Zombies!");
+initLoop(onReady, null, null);
 
-//test
-fn brains(actor: Opaque) {
-	actor.setX(actor.x + 1);
-}
 
-setActorStep(brains);

@@ -69,7 +69,7 @@ unsigned char* makeCodeFromSource(const char* source) {
 
 //static pointers
 static Toy_Function* onReady = NULL;
-static Toy_Function* onStep = NULL;
+static Toy_Function* onFrame = NULL;
 static Toy_Function* onClose = NULL;
 
 //game API definitions
@@ -85,7 +85,7 @@ void initScreen(Toy_VM* vm) {
 
 	//setup raylib
 	InitWindow(TOY_VALUE_AS_INTEGER(width), TOY_VALUE_AS_INTEGER(height), TOY_VALUE_AS_STRING(caption)->leaf.data);
-	// SetTargetFPS(60);
+	SetTargetFPS(60);
 
 	if (!IsWindowReady()) {
 		fprintf(stderr, TOY_CC_ERROR "ERROR: raylib failed to init the window, exiting" TOY_CC_RESET "\n");
@@ -99,7 +99,7 @@ void initScreen(Toy_VM* vm) {
 
 void initLoop(Toy_VM* vm) {
 	Toy_Value valueOnClose = Toy_popStack(&vm->stack);
-	Toy_Value valueOnStep = Toy_popStack(&vm->stack);
+	Toy_Value valueOnFrame = Toy_popStack(&vm->stack);
 	Toy_Value valueOnReady = Toy_popStack(&vm->stack);
 
 	if (!TOY_VALUE_IS_FUNCTION(valueOnClose) && !TOY_VALUE_IS_NULL(valueOnClose)) {
@@ -107,7 +107,7 @@ void initLoop(Toy_VM* vm) {
 		exit(-1);
 	}
 
-	if (!TOY_VALUE_IS_FUNCTION(valueOnStep) && !TOY_VALUE_IS_NULL(valueOnStep)) {
+	if (!TOY_VALUE_IS_FUNCTION(valueOnFrame) && !TOY_VALUE_IS_NULL(valueOnFrame)) {
 		fprintf(stderr, TOY_CC_ERROR "ERROR: Bad types found in 'initLoop', exiting" TOY_CC_RESET "\n");
 		exit(-1);
 	}
@@ -124,12 +124,12 @@ void initLoop(Toy_VM* vm) {
 		}
 		onReady = TOY_VALUE_AS_FUNCTION(valueOnReady);
 	}
-	if (TOY_VALUE_IS_FUNCTION(valueOnStep)) {
-		if (TOY_VALUE_AS_FUNCTION(valueOnStep)->type != TOY_FUNCTION_CUSTOM) {
+	if (TOY_VALUE_IS_FUNCTION(valueOnFrame)) {
+		if (TOY_VALUE_AS_FUNCTION(valueOnFrame)->type != TOY_FUNCTION_CUSTOM) {
 			fprintf(stderr, TOY_CC_ERROR "ERROR: Bad function found in 'initLoop', exiting (only allows custom functions or null)" TOY_CC_RESET "\n");
 			exit(-1);
 		}
-		onStep = TOY_VALUE_AS_FUNCTION(valueOnStep);
+		onFrame = TOY_VALUE_AS_FUNCTION(valueOnFrame);
 	}
 	if (TOY_VALUE_IS_FUNCTION(valueOnClose)) {
 		if (TOY_VALUE_AS_FUNCTION(valueOnClose)->type != TOY_FUNCTION_CUSTOM) {
@@ -199,9 +199,9 @@ int main() {
 		Toy_resetVM(&vm, false, false);
 	}
 
-	//onStep is called each frame
-	if (onStep != NULL) {
-		Toy_bindVM(&vm, onStep->bytecode.code, onStep->bytecode.parentScope);
+	//onFrame is called each frame
+	if (onFrame != NULL) {
+		Toy_bindVM(&vm, onFrame->bytecode.code, onFrame->bytecode.parentScope);
 	}
 
 	while (!WindowShouldClose()) {
@@ -212,7 +212,7 @@ int main() {
 		// if (IsKeyDown(KEY_RIGHT)) player.position.x += 5.0f;
 
 		//process the actors (if possible)
-		processActorStep(&vm);
+		processActors(&vm);
 
 		//run the onStep function
 		Toy_runVM(&vm); //no check needed, empty VMs are skipped
@@ -226,7 +226,7 @@ int main() {
 	}
 
 	//clear onStep
-	if (onStep != NULL) {
+	if (onFrame != NULL) {
 		Toy_resetVM(&vm, false, false);
 	}
 

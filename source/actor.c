@@ -12,7 +12,6 @@
 //static storage
 static Toy_Table* spriteTable = NULL;
 static Toy_Array* actorArray = NULL;
-static Toy_Function* actorStep = NULL;
 
 //callbacks
 static void api_loadSprite(Toy_VM* vm) {
@@ -81,7 +80,7 @@ static void api_loadSprite(Toy_VM* vm) {
 }
 
 static void api_spawnActorAt(Toy_VM* vm) {
-	//sprite, x, y -> void
+	//sprite, onStep, x, y -> void
 
 	//check for initialization
 	if (spriteTable == NULL || actorArray == NULL) {
@@ -90,19 +89,21 @@ static void api_spawnActorAt(Toy_VM* vm) {
 	}
 
 	//check parameter count
-	if (vm->stack->count < 3) {
+	if (vm->stack->count < 4) {
 		fprintf(stderr, TOY_CC_ERROR "ERROR: Not enough parameters found in 'spawnActorAt'" TOY_CC_RESET "\n");
 		return;
 	}
 
 	Toy_Value ypos = Toy_popStack(&vm->stack);
 	Toy_Value xpos = Toy_popStack(&vm->stack);
+	Toy_Value step = Toy_popStack(&vm->stack);
 	Toy_Value key = Toy_popStack(&vm->stack);
 
 	//check types
-	if (!TOY_VALUE_IS_INTEGER(xpos) || !TOY_VALUE_IS_INTEGER(ypos)) {
+	if (!TOY_VALUE_IS_INTEGER(xpos) || !TOY_VALUE_IS_INTEGER(ypos) || !(TOY_VALUE_IS_FUNCTION(step) || TOY_VALUE_IS_NULL(step))) {
 		fprintf(stderr, TOY_CC_ERROR "ERROR: Bad parameter types found in 'spawnActorAt'" TOY_CC_RESET "\n");
 		Toy_freeValue(key);
+		Toy_freeValue(step);
 		Toy_freeValue(xpos);
 		Toy_freeValue(ypos);
 		return;
@@ -117,9 +118,15 @@ static void api_spawnActorAt(Toy_VM* vm) {
 		free(cstr);
 		Toy_freeString(string);
 		Toy_freeValue(key);
+		Toy_freeValue(step);
 		Toy_freeValue(xpos);
 		Toy_freeValue(ypos);
 		return;
+	}
+
+	Toy_Function* onStep = NULL;
+	if (TOY_VALUE_IS_FUNCTION(step)) {
+		onStep = Toy_copyFunction(&vm->memoryBucket, TOY_VALUE_AS_FUNCTION(step));
 	}
 
 	//expand the array if needed
@@ -135,7 +142,7 @@ static void api_spawnActorAt(Toy_VM* vm) {
 	ActorData* newActorPtr = NULL;
 	for (unsigned int i = 0; i < actorArray->count; i++) {
 		ActorData* mData = (ActorData*)TOY_VALUE_AS_OPAQUE(actorArray->data[i]);
-		if (mData->health <= 0) { //if this actor is dead, steal the slot
+		if (!mData->enabled) { //if this actor is dead, steal the slot
 			newActorPtr = mData;
 			break;
 		}
@@ -150,33 +157,16 @@ static void api_spawnActorAt(Toy_VM* vm) {
 	//finally, store the new actor's data
 	(*newActorPtr) = (ActorData){
 		.sprite = (SpriteData*)(TOY_VALUE_AS_OPAQUE(spriteValue)),
+		.onStep = onStep,
 		.position = { TOY_VALUE_AS_INTEGER(xpos), TOY_VALUE_AS_INTEGER(ypos) },
-		.health = 10,
+		.enabled = true,
 	};
 
 	Toy_freeValue(spriteValue);
 	Toy_freeValue(key);
+	Toy_freeValue(step);
 	Toy_freeValue(xpos);
 	Toy_freeValue(ypos);
-}
-
-static void api_setActorStep(Toy_VM* vm) {
-	Toy_Value value = Toy_popStack(&vm->stack);
-
-	if (!TOY_VALUE_IS_FUNCTION(value) && !TOY_VALUE_IS_NULL(value)) {
-		fprintf(stderr, TOY_CC_ERROR "ERROR: Bad argument type found in 'setActorStep', exiting" TOY_CC_RESET "\n");
-		Toy_freeValue(value);
-		exit(-1);
-	}
-
-	if (TOY_VALUE_IS_FUNCTION(value)) {
-		if (TOY_VALUE_AS_FUNCTION(value)->type != TOY_FUNCTION_CUSTOM) {
-			fprintf(stderr, TOY_CC_ERROR "ERROR: Bad function found in 'setActorStep', exiting (only allows custom functions or null)" TOY_CC_RESET "\n");
-			Toy_freeValue(value);
-			exit(-1);
-		}
-		actorStep = TOY_VALUE_AS_FUNCTION(value); //do not free, it'll be needed
-	}
 }
 
 //callback utils
@@ -190,7 +180,6 @@ static CallbackPairs callbackPairs[] = {
 	// {"unloadSprite", unloadSprite},
 	{"spawnActorAt", api_spawnActorAt},
 	// {"despawnActor", despawnActor},
-	{"setActorStep", api_setActorStep},
 
 	{NULL, NULL},
 };
@@ -231,64 +220,53 @@ void freeActorAPI(Toy_VM* vm) {
 	spriteTable = NULL;
 
 	actorArray = Toy_resizeArray(actorArray, 0);
-
-	Toy_freeFunction(actorStep);
-	actorStep = NULL;
 }
 
-void processActorStep(Toy_VM* vm) {
+void processActors(Toy_VM* vm) {
 	//check for initialization
 	if (spriteTable == NULL || actorArray == NULL) {
 		fprintf(stderr, TOY_CC_ERROR "ERROR: Object pool for actor system hasn't been initialized" TOY_CC_RESET "\n");
 		return;
 	}
 
-	if (actorStep == NULL) {
-		return; //no-op
-	}
-
-	//BUG: invoking a callback with a parameter is process-heavy
-
 	//bind a sub-vm
 	Toy_VM subVM;
 	Toy_inheritVM(vm, &subVM);
-	Toy_bindVM(&subVM, actorStep->bytecode.code, actorStep->bytecode.parentScope); //TODO: each actor needs its own step function?
-
-	//paramAddr is relative to the data section, and is followed by the param type
-	unsigned int paramAddr = ((unsigned int*)(subVM.code + subVM.paramAddr))[0];
-	Toy_ValueType paramType = (Toy_ValueType)(((unsigned int*)(subVM.code + subVM.paramAddr))[1]);
-
-	//c-string of the param's name && as a name string
-	const char* cstr = ((char*)(subVM.code + subVM.dataAddr)) + paramAddr;
-	Toy_String* name = Toy_toStringLength(&subVM.memoryBucket, cstr, strlen(cstr)); //don't use 'create'
-
-	int ticker = 0;
 
 	//load each valid actor and process them one at a time
 	for (unsigned int i = 0; i < actorArray->count; i++) {
 		ActorData* actor = (ActorData*)TOY_VALUE_AS_OPAQUE(actorArray->data[i]);
-		if (actor->health > 0) {
-			ticker++;
-			subVM.scope = Toy_pushScope(&subVM.memoryBucket, subVM.scope);
 
-			Toy_declareScope(subVM.scope, name, paramType, Toy_copyValue(&subVM.memoryBucket, actorArray->data[i]), true);
-			Toy_runVM(&subVM);
-
-			subVM.scope = Toy_popScope(subVM.scope);
+		if (!actor->enabled || actor->onStep == NULL) {
+			continue;
 		}
+
+		//prep the callback
+		Toy_bindVM(&subVM, actor->onStep->bytecode.code, actor->onStep->bytecode.parentScope);
+
+		//paramAddr is relative to the data section, and is followed by the param type
+		unsigned int paramAddr = ((unsigned int*)(subVM.code + subVM.paramAddr))[0];
+		Toy_ValueType paramType = (Toy_ValueType)(((unsigned int*)(subVM.code + subVM.paramAddr))[1]);
+
+		//c-string of the param's name && as a name string
+		const char* cstr = ((char*)(subVM.code + subVM.dataAddr)) + paramAddr;
+		Toy_String* name = Toy_toStringLength(&subVM.memoryBucket, cstr, strlen(cstr)); //don't use 'create'
+
+
+		//inject this actor as a parameter
+		subVM.scope = Toy_pushScope(&subVM.memoryBucket, subVM.scope);
+		Toy_declareScope(subVM.scope, name, paramType, Toy_copyValue(&subVM.memoryBucket, actorArray->data[i]), true);
+
+		//run
+		Toy_runVM(&subVM);
+
+		//prep the next one
+		Toy_resetVM(&subVM, false, true); //preserving the stack prevents memory issues
+		subVM.scope = NULL; //BUGFIX: don't retain scope for different callbacks
+		Toy_freeString(name);
 	}
 
 	Toy_freeVM(&subVM);
-
-	Toy_freeString(name);
-
-	//DEBUG: "wipe" the actors if there's too many, so memory doesn't keep growing.
-	if (ticker >= 100) {
-		for (unsigned int i = 0; i < actorArray->count; i++) {
-			ActorData* actor = (ActorData*)TOY_VALUE_AS_OPAQUE(actorArray->data[i]);
-			actor->health = 0;
-		}
-	}
 }
 
 void drawActors(Toy_VM* vm) {
@@ -303,7 +281,7 @@ void drawActors(Toy_VM* vm) {
 	for (unsigned int i = 0; i < actorArray->count; i++) {
 		ActorData* actor = (ActorData*)TOY_VALUE_AS_OPAQUE(actorArray->data[i]);
 
-		if (actor->health > 0) {
+		if (actor->enabled) {
 			DrawTextureRec(actor->sprite->texture, actor->sprite->rect, actor->position, WHITE);
 		}
 	}
@@ -342,8 +320,8 @@ void loadSprite(Toy_Bucket** bucketHandle, Toy_Value key, const char* fname, int
 	Toy_insertTable(&spriteTable, Toy_copyValue(bucketHandle, key), TOY_OPAQUE_FROM_POINTER(sprite));
 }
 
-ActorData* spawnActorAt(Toy_Bucket** bucketHandle, Toy_Value key, int xpos, int ypos) {
-	//sprite, x, y -> void
+ActorData* spawnActorAt(Toy_Bucket** bucketHandle, Toy_Value key, Toy_Function* onStep, int xpos, int ypos) {
+	//sprite, onStep, x, y -> void
 
 	//check for initialization
 	if (spriteTable == NULL || actorArray == NULL) {
@@ -376,7 +354,7 @@ ActorData* spawnActorAt(Toy_Bucket** bucketHandle, Toy_Value key, int xpos, int 
 	ActorData* newActorPtr = NULL;
 	for (unsigned int i = 0; i < actorArray->count; i++) {
 		ActorData* mData = (ActorData*)TOY_VALUE_AS_OPAQUE(actorArray->data[i]);
-		if (mData->health <= 0) { //if this actor is dead, steal the slot
+		if (mData->enabled) { //if this actor is dead, steal the slot
 			newActorPtr = mData;
 			break;
 		}
@@ -391,8 +369,9 @@ ActorData* spawnActorAt(Toy_Bucket** bucketHandle, Toy_Value key, int xpos, int 
 	//finally, store the new actor's data
 	(*newActorPtr) = (ActorData){
 		.sprite = (SpriteData*)(TOY_VALUE_AS_OPAQUE(spriteValue)),
+		.onStep = onStep,
 		.position = { xpos, ypos },
-		.health = 10,
+		.enabled = true,
 	};
 
 	Toy_freeValue(spriteValue);
