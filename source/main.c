@@ -73,7 +73,9 @@ static Toy_Function* onFrame = NULL;
 static Toy_Function* onClose = NULL;
 
 //game API definitions
-void initScreen(Toy_VM* vm) {
+void api_initScreen(Toy_VM* vm, Toy_FunctionNative* self) {
+	(void)self;
+
 	Toy_Value caption = Toy_popStack(&vm->stack);
 	Toy_Value height = Toy_popStack(&vm->stack);
 	Toy_Value width = Toy_popStack(&vm->stack);
@@ -97,7 +99,9 @@ void initScreen(Toy_VM* vm) {
 	Toy_freeValue(caption);
 }
 
-void initLoop(Toy_VM* vm) {
+void api_initLoop(Toy_VM* vm, Toy_FunctionNative* self) {
+	(void)self;
+
 	Toy_Value valueOnClose = Toy_popStack(&vm->stack);
 	Toy_Value valueOnFrame = Toy_popStack(&vm->stack);
 	Toy_Value valueOnReady = Toy_popStack(&vm->stack);
@@ -147,8 +151,8 @@ typedef struct CallbackPairs {
 } CallbackPairs;
 
 static CallbackPairs callbackPairs[] = {
-	{"initScreen", initScreen},
-	{"initLoop", initLoop},
+	{"initScreen", api_initScreen},
+	{"initLoop", api_initLoop},
 	{NULL, NULL},
 };
 

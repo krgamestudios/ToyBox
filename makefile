@@ -5,29 +5,29 @@
 #LDFLAGS+=
 
 #directories
-export GAME_SOURCEDIR=source
-export GAME_OUTDIR=out
-export GAME_OBJDIR=obj
+export VAMP_SOURCEDIR=source
+export VAMP_OUTDIR=out
+export VAMP_OBJDIR=obj
 
 #Override Toy's build destination
 export TOY_SOURCEDIR=Toy/source
-export TOY_OUTDIR=../$(GAME_OUTDIR)
-export TOY_OBJDIR=$(GAME_OBJDIR)
+export TOY_OUTDIR=../$(VAMP_OUTDIR)
+export TOY_OBJDIR=$(VAMP_OBJDIR)
 
 #targets
-all: $(GAME_OUTDIR) Toy source
+all: $(VAMP_OUTDIR) Toy source
 
 .PHONY: source
 source:
-	$(MAKE) -C $(GAME_SOURCEDIR)
+	$(MAKE) -C $(VAMP_SOURCEDIR)
 
 .PHONY: Toy
 Toy:
 	$(MAKE) -C $(TOY_SOURCEDIR)
 
 #util targets
-$(GAME_OUTDIR):
-	mkdir $(GAME_OUTDIR)
+$(VAMP_OUTDIR):
+	mkdir $(VAMP_OUTDIR)
 
 #util commands
 .PHONY: clean

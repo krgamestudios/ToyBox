@@ -9,54 +9,54 @@ ifeq ($(shell uname),Darwin) #make sure there's enough space for the dylib fix
 endif
 
 #directories
-REPL_ROOTDIR=..
-REPL_REPLDIR=.
-REPL_SOURCEDIR=$(REPL_ROOTDIR)/$(TOY_SOURCEDIR)
+GAME_ROOTDIR=..
+GAME_SOURCEDIR=.
+GAME_TOYDIR=$(GAME_ROOTDIR)/$(TOY_SOURCEDIR)
 
-REPL_OUTDIR=$(REPL_ROOTDIR)/$(GAME_OUTDIR)
-REPL_OBJDIR=$(TOY_OBJDIR)
+GAME_OUTDIR=$(GAME_ROOTDIR)/$(VAMP_OUTDIR)
+GAME_OBJDIR=$(VAMP_OBJDIR)
 
 #file names
-REPL_REPLFILES=$(wildcard $(REPL_REPLDIR)/*.c)
-REPL_OBJFILES=$(addprefix $(REPL_OBJDIR)/,$(notdir $(REPL_REPLFILES:.c=.o)))
-REPL_TARGETNAME=vampires
+GAME_SOURCEFILES=$(wildcard $(GAME_SOURCEDIR)/*.c)
+GAME_OBJFILES=$(addprefix $(GAME_OBJDIR)/,$(notdir $(GAME_SOURCEFILES:.c=.o)))
+GAME_TARGETNAME=vampires
 
 #file extensions
 ifeq ($(OS),Windows_NT)
-	REPL_TARGETEXT=.exe
+	GAME_TARGETEXT=.exe
 else
-	REPL_TARGETEXT=.out
+	GAME_TARGETEXT=.out
 endif
 
 #linker fix
-LDFLAGS+=-L$(realpath $(REPL_OUTDIR))
+LDFLAGS+=-L$(realpath $(GAME_OUTDIR))
 
 #build the object files, compile the test cases, and run
 all: build link
 
 #targets for each step
 .PHONY: build
-build: $(REPL_OBJDIR) $(REPL_OBJFILES)
+build: $(GAME_OBJDIR) $(GAME_OBJFILES)
 
 .PHONY: link
-link: $(REPL_OUTDIR) $(REPL_OUTDIR)/$(REPL_TARGETNAME)$(REPL_TARGETEXT)
+link: $(GAME_OUTDIR) $(GAME_OUTDIR)/$(GAME_TARGETNAME)$(GAME_TARGETEXT)
 
 #util targets
-$(REPL_OUTDIR):
-	mkdir $(REPL_OUTDIR)
+$(GAME_OUTDIR):
+	mkdir $(GAME_OUTDIR)
 
-$(REPL_OBJDIR):
-	mkdir $(REPL_OBJDIR)
+$(GAME_OBJDIR):
+	mkdir $(GAME_OBJDIR)
 
 #compilation steps
-$(REPL_OBJDIR)/%.o: $(REPL_REPLDIR)/%.c
-	$(CC) -c -o $@ $< $(addprefix -I,$(REPL_REPLDIR)) $(addprefix -I,$(REPL_SOURCEDIR)) $(CFLAGS)
+$(GAME_OBJDIR)/%.o: $(GAME_SOURCEDIR)/%.c
+	$(CC) -c -o $@ $< $(addprefix -I,$(GAME_SOURCEDIR)) $(addprefix -I,$(GAME_TOYDIR)) $(CFLAGS)
 
-$(REPL_OUTDIR)/$(REPL_TARGETNAME)$(REPL_TARGETEXT): $(REPL_OBJFILES)
-	$(CC) -DTOY_IMPORT $(CFLAGS) -o $@ $(REPL_OBJFILES) $(LDFLAGS) $(LIBS)
+$(GAME_OUTDIR)/$(GAME_TARGETNAME)$(GAME_TARGETEXT): $(GAME_OBJFILES)
+	$(CC) -DTOY_IMPORT $(CFLAGS) -o $@ $(GAME_OBJFILES) $(LDFLAGS) $(LIBS)
 ifeq ($(shell uname),Darwin) #dylib fix
 	otool -L $@
 	install_name_tool -add_rpath @executable_path/. $@
-	install_name_tool -change $(REPL_OUTDIR)/libToy.dylib @executable_path/libToy.dylib $@
+	install_name_tool -change $(GAME_OUTDIR)/libToy.dylib @executable_path/libToy.dylib $@
 	otool -L $@
 endif

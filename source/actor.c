@@ -14,8 +14,9 @@ static Toy_Table* spriteTable = NULL;
 static Toy_Array* actorArray = NULL;
 
 //callbacks
-static void api_loadSprite(Toy_VM* vm) {
+static void api_loadSprite(Toy_VM* vm, Toy_FunctionNative* self) {
 	//key, file, width, height -> null
+	(void)self;
 
 	if (!IsWindowReady()) {
 		fprintf(stderr, TOY_CC_ERROR "ERROR: Can't load actor sprites before the window has been initialized" TOY_CC_RESET "\n");
@@ -79,8 +80,9 @@ static void api_loadSprite(Toy_VM* vm) {
 	Toy_freeValue(height);
 }
 
-static void api_spawnActorAt(Toy_VM* vm) {
+static void api_spawnActorAt(Toy_VM* vm, Toy_FunctionNative* self) {
 	//sprite, onStep, x, y -> void
+	(void)self;
 
 	//check for initialization
 	if (spriteTable == NULL || actorArray == NULL) {
@@ -141,9 +143,16 @@ static void api_spawnActorAt(Toy_VM* vm) {
 	//find an existing spot for the new actor, overwriting a dead one if able
 	ActorData* newActorPtr = NULL;
 	for (unsigned int i = 0; i < actorArray->count; i++) {
-		ActorData* mData = (ActorData*)TOY_VALUE_AS_OPAQUE(actorArray->data[i]);
-		if (!mData->enabled) { //if this actor is dead, steal the slot
-			newActorPtr = mData;
+		ActorData* actorData = (ActorData*)TOY_VALUE_AS_OPAQUE(actorArray->data[i]);
+		if (!actorData->enabled) { //if this actor is dead, steal the slot
+			//free the dead actor's internals
+			actorData->sprite = NULL;
+			if (actorData->onStep != NULL) {
+				Toy_freeFunction(actorData->onStep);
+				actorData->onStep = NULL;
+			}
+
+			newActorPtr = actorData;
 			break;
 		}
 	}
@@ -219,6 +228,20 @@ void freeActorAPI(Toy_VM* vm) {
 	Toy_freeTable(spriteTable);
 	spriteTable = NULL;
 
+	//unload each actor's members
+	for (unsigned int i = 0; i < actorArray->count; i++) {
+		ActorData* actorData = (ActorData*)TOY_VALUE_AS_OPAQUE(actorArray->data[i]);
+
+		//free the dead actor's internals
+		actorData->sprite = NULL;
+		if (actorData->onStep != NULL) {
+			Toy_freeFunction(actorData->onStep);
+			actorData->onStep = NULL;
+		}
+		actorData->position = (Vector2){0,0};
+		actorData->enabled = false;
+	}
+
 	actorArray = Toy_resizeArray(actorArray, 0);
 }
 
@@ -254,7 +277,6 @@ void processActors(Toy_VM* vm) {
 
 
 		//inject this actor as a parameter
-		subVM.scope = Toy_pushScope(&subVM.memoryBucket, subVM.scope);
 		Toy_declareScope(subVM.scope, name, paramType, Toy_copyValue(&subVM.memoryBucket, actorArray->data[i]), true);
 
 		//run
@@ -381,7 +403,9 @@ ActorData* spawnActorAt(Toy_Bucket** bucketHandle, Toy_Value key, Toy_Function* 
 }
 
 //opaque handler
-static void attr_actorSetX(Toy_VM* vm) {
+static void attr_actorSetX(Toy_VM* vm, Toy_FunctionNative* self) {
+	(void)self;
+
 	Toy_Value compound = Toy_popStack(&vm->stack);
 	Toy_Value x = Toy_popStack(&vm->stack);
 
@@ -394,7 +418,9 @@ static void attr_actorSetX(Toy_VM* vm) {
 	actor->position.x = TOY_VALUE_AS_INTEGER(x);
 }
 
-static void attr_actorSetY(Toy_VM* vm) {
+static void attr_actorSetY(Toy_VM* vm, Toy_FunctionNative* self) {
+	(void)self;
+
 	Toy_Value compound = Toy_popStack(&vm->stack);
 	Toy_Value y = Toy_popStack(&vm->stack);
 
