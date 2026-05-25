@@ -218,7 +218,7 @@ int main() {
 		//process the actors (if possible)
 		processActors(&vm);
 
-		//run the onStep function
+		//run the onFrame function
 		Toy_runVM(&vm); //no check needed, empty VMs are skipped
 
 		//drawing
@@ -229,7 +229,7 @@ int main() {
 		EndDrawing();
 	}
 
-	//clear onStep
+	//clear after the final frame
 	if (onFrame != NULL) {
 		Toy_resetVM(&vm, false, false);
 	}

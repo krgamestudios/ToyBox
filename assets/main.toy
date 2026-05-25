@@ -32,4 +32,3 @@ fn onFrame() {
 initScreen(1280, 720, "Oh no, Zombies!");
 initLoop(onReady, null, null);
 
-
