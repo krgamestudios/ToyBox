@@ -13,7 +13,7 @@
 static Toy_Table* spriteTable = NULL;
 static Toy_Array* actorArray = NULL;
 
-//callbacks
+//API bindings
 static void api_loadSprite(Toy_VM* vm, Toy_FunctionNative* self) {
 	//key, file, width, height -> null
 	(void)self;
@@ -165,6 +165,7 @@ static void api_spawnActorAt(Toy_VM* vm, Toy_FunctionNative* self) {
 
 	//finally, store the new actor's data
 	(*newActorPtr) = (ActorData){
+		.type = OPAQUE_ACTOR,
 		.sprite = (SpriteData*)(TOY_VALUE_AS_OPAQUE(spriteValue)),
 		.onStep = onStep,
 		.position = { TOY_VALUE_AS_INTEGER(xpos), TOY_VALUE_AS_INTEGER(ypos) },
@@ -309,100 +310,7 @@ void drawActors(Toy_VM* vm) {
 	}
 }
 
-//accessors & mutators
-void loadSprite(Toy_Bucket** bucketHandle, Toy_Value key, const char* fname, int width, int height) {
-	//key, file, width, height -> null
-
-	if (!IsWindowReady()) {
-		fprintf(stderr, TOY_CC_ERROR "ERROR: Can't load actor sprites before the window has been initialized" TOY_CC_RESET "\n");
-		return;
-	}
-
-	//check for initialization
-	if (spriteTable == NULL || actorArray == NULL) {
-		fprintf(stderr, TOY_CC_ERROR "ERROR: Object pool for actor system hasn't been initialized" TOY_CC_RESET "\n");
-		return;
-	}
-
-	//check for overwriting the key
-	if ( TOY_VALUE_IS_NULL(Toy_lookupTable(&spriteTable, key)) != true ) {
-		fprintf(stderr, TOY_CC_ERROR "ERROR: Can't overwrite existing actor sprite key" TOY_CC_RESET "\n");
-		Toy_freeValue(key);
-		return;
-	}
-
-	//create the sprite stored in the bucket
-	SpriteData* sprite = (SpriteData*)Toy_partitionBucket(bucketHandle, sizeof(SpriteData));
-	sprite->rect = (Rectangle){ 0, 0, width, height };
-
-	//load the texture from a file
-	sprite->texture = LoadTexture(fname);
-
-	//insert into the table as an opaque
-	Toy_insertTable(&spriteTable, Toy_copyValue(bucketHandle, key), TOY_OPAQUE_FROM_POINTER(sprite));
-}
-
-ActorData* spawnActorAt(Toy_Bucket** bucketHandle, Toy_Value key, Toy_Function* onStep, int xpos, int ypos) {
-	//sprite, onStep, x, y -> void
-
-	//check for initialization
-	if (spriteTable == NULL || actorArray == NULL) {
-		fprintf(stderr, TOY_CC_ERROR "ERROR: Object pool for actor system hasn't been initialized" TOY_CC_RESET "\n");
-		return NULL;
-	}
-
-	//get the sprite
-	Toy_Value spriteValue = Toy_lookupTable(&spriteTable, key);
-	if (TOY_VALUE_IS_NULL(spriteValue)) {
-		Toy_String* string = Toy_stringifyValue(bucketHandle, key);
-		char* cstr = Toy_getStringRaw(string);
-		fprintf(stderr, TOY_CC_ERROR "ERROR: Can't spawn a actor with a non-existant sprite '%s'" TOY_CC_RESET "\n", cstr);
-		free(cstr);
-		Toy_freeString(string);
-		Toy_freeValue(key);
-		return NULL;
-	}
-
-	//expand the array if needed
-	if (actorArray->count == actorArray->capacity) {
-		actorArray = Toy_resizeArray(actorArray, actorArray->capacity * TOY_ARRAY_EXPANSION_RATE);
-		//set the new entries to null values
-		for (unsigned int i = actorArray->count; i < actorArray->capacity; i++) {
-			actorArray->data[i] = TOY_VALUE_FROM_NULL();
-		}
-	}
-
-	//find an existing spot for the new actor, overwriting a dead one if able
-	ActorData* newActorPtr = NULL;
-	for (unsigned int i = 0; i < actorArray->count; i++) {
-		ActorData* mData = (ActorData*)TOY_VALUE_AS_OPAQUE(actorArray->data[i]);
-		if (mData->enabled) { //if this actor is dead, steal the slot
-			newActorPtr = mData;
-			break;
-		}
-	}
-
-	//if no dead actors were found, make a new slot
-	if (newActorPtr == NULL) {
-		newActorPtr = (ActorData*)Toy_partitionBucket(bucketHandle, sizeof(ActorData));
-		actorArray->data[actorArray->count++] = TOY_OPAQUE_FROM_POINTER(newActorPtr);
-	}
-
-	//finally, store the new actor's data
-	(*newActorPtr) = (ActorData){
-		.sprite = (SpriteData*)(TOY_VALUE_AS_OPAQUE(spriteValue)),
-		.onStep = onStep,
-		.position = { xpos, ypos },
-		.enabled = true,
-	};
-
-	Toy_freeValue(spriteValue);
-	Toy_freeValue(key);
-
-	return newActorPtr;
-}
-
-//opaque handler
+//opaque bindings
 static void attr_actorSetX(Toy_VM* vm, Toy_FunctionNative* self) {
 	(void)self;
 
@@ -440,12 +348,6 @@ Toy_Value handleActorAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attrib
 		return TOY_VALUE_FROM_NULL();
 	}
 
-	//check for correct types
-	if (!TOY_VALUE_IS_OPAQUE(compound) || !TOY_VALUE_IS_STRING(attribute) || TOY_VALUE_AS_STRING(attribute)->info.type != TOY_STRING_LEAF) {
-		fprintf(stderr, TOY_CC_ERROR "ERROR: Bad parameters found in 'handleActorAttributes'" TOY_CC_RESET "\n");
-		return TOY_VALUE_FROM_NULL(); //do not free the params here
-	}
-
 	ActorData* actor = (ActorData*)TOY_VALUE_AS_OPAQUE(compound);
 
 	if (TOY_VALUE_AS_STRING(attribute)->info.length == 1 && strncmp(TOY_VALUE_AS_STRING(attribute)->leaf.data, "x", 1)  == 0) {
@@ -465,7 +367,7 @@ Toy_Value handleActorAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attrib
 
 	else {
 		char buffer[256];
-		snprintf(buffer, 256, "Unknown attribute '%s' of type ActorData (an Opaque)", TOY_VALUE_AS_STRING(attribute)->leaf.data);
+		snprintf(buffer, 256, "Unknown attribute '%s' of 'ActorData'", TOY_VALUE_AS_STRING(attribute)->leaf.data);
 		Toy_error(buffer);
 		return TOY_VALUE_FROM_NULL();
 	}

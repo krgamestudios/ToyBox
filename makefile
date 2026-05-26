@@ -4,6 +4,8 @@
 #LIBS+=-lm
 #LDFLAGS+=
 
+#TODO: add debug & release build options, at least for Toy
+
 #directories
 export VAMP_SOURCEDIR=source
 export VAMP_OUTDIR=out

@@ -1,4 +1,4 @@
-
+//debug testing
 var counter = 0;
 var randi: Int = 69420;
 fn rand() {
@@ -12,6 +12,45 @@ fn wander(actor: Opaque) {
 	counter++;
 }
 
+//TODO: general purpose math functions
+//TODO: optimize away single-line blocks in the AST
+
+//player controlled character
+var playerMaxMotion: Int = 5;
+var playerMotionX: Int = 0;
+var playerMotionY: Int = 0;
+
+fn playerOnFrame(player: Opaque) {
+	//accept input
+	if (Keyboard.UP) {
+		playerMotionY -= 5;
+	}
+	if (Keyboard.DOWN) {
+		playerMotionY += 5;
+	}
+	if (Keyboard.LEFT) {
+		playerMotionX -= 5;
+	}
+	if (Keyboard.RIGHT) {
+		playerMotionX += 5;
+	}
+
+//	print playerMotionX;
+//	print playerMotionY;
+//	print playerMaxMotion;
+//	print -playerMaxMotion;
+
+	//cap the speed
+	if (playerMotionX > playerMaxMotion) playerMotionX = playerMaxMotion;
+	if (playerMotionX < -playerMaxMotion) playerMotionX = -playerMaxMotion;
+	if (playerMotionY > playerMaxMotion) playerMotionY = playerMaxMotion;
+	if (playerMotionY < -playerMaxMotion) playerMotionY = -playerMaxMotion;
+
+	//move the player
+	player.setX(player.x + playerMotionX);
+	player.setY(player.y + playerMotionY);
+}
+
 //when the game is ready, load the "zombie" sprite
 fn onReady() {
 	loadSprite("zombie", "assets/parvati.png", 32, 32);
@@ -21,14 +60,17 @@ fn onReady() {
 	spawnActorAt("zombie", wander, 250, 500);
 	spawnActorAt("zombie", wander, 500, 250);
 	spawnActorAt("zombie", wander, 500, 500);
+
+	//spawn the player
+	loadSprite("player", "assets/parvati.png", 32, 32);
+	spawnActorAt("player", playerOnFrame, 300, 300);
 }
 
 fn onFrame() {
 	//debug
-	print counter;
+//	print Keyboard.A;
 }
 
 //example API for the game
 initScreen(1280, 720, "Oh no, Zombies!");
-initLoop(onReady, null, null);
-
+initLoop(onReady, onFrame, null);

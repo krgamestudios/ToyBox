@@ -8,11 +8,14 @@
 #include "toy_vm.h"
 #include "toy_attributes.h"
 
+#include "keyboard.h"
 #include "actor.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+// #include "bytecode_inspector.h"
 
 //utils
 unsigned char* readFile(char* path, int* size) {
@@ -43,7 +46,7 @@ unsigned char* readFile(char* path, int* size) {
 		return NULL;
 	}
 
-	buffer[(*size)++] = '\0';
+	buffer[(*size)] = '\0';
 
 	//clean up and return
 	fclose(file);
@@ -144,7 +147,31 @@ void api_initLoop(Toy_VM* vm, Toy_FunctionNative* self) {
 	}
 }
 
-//game API tools
+//opaque dispatch
+Toy_Value dispatchOpaqueAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attribute) {
+	//check for correct types
+	if (!TOY_VALUE_IS_OPAQUE(compound) || !TOY_VALUE_IS_STRING(attribute) || TOY_VALUE_AS_STRING(attribute)->info.type != TOY_STRING_LEAF) {
+		fprintf(stderr, TOY_CC_ERROR "ERROR: Bad parameters found in 'handleOpaqueAttributes'" TOY_CC_RESET "\n");
+		return TOY_VALUE_FROM_NULL(); //do not free the params here
+	}
+
+	//assume the first byte is the type
+	OpaqueType* type = (OpaqueType*)TOY_VALUE_AS_OPAQUE(compound);
+
+	switch(*type) {
+		case OPAQUE_KEYBOARD:
+			return handleKeyboardAttributes(vm, compound, attribute);
+
+		case OPAQUE_ACTOR:
+			return handleActorAttributes(vm, compound, attribute);
+
+		default:
+			fprintf(stderr, TOY_CC_ERROR "ERROR: Bad opaque type found in 'handleOpaqueAttributes'" TOY_CC_RESET "\n");
+			return TOY_VALUE_FROM_NULL(); //do not free the params here
+	}
+}
+
+//API tools
 typedef struct CallbackPairs {
 	const char* name;
 	Toy_nativeCallback callback;
@@ -169,6 +196,11 @@ void initGameAPI(Toy_VM* vm) {
 		Toy_declareScope(vm->scope, key, TOY_VALUE_FUNCTION, TOY_VALUE_FROM_FUNCTION(fn), true);
 		Toy_freeString(key);
 	}
+
+	//declare keyboard opaque
+	Toy_String* keyboardString = Toy_toString(&vm->memoryBucket, "Keyboard");
+	Toy_declareScope(vm->scope, keyboardString, TOY_VALUE_OPAQUE, TOY_OPAQUE_FROM_POINTER(&keyboardData), true);
+	Toy_freeString(keyboardString);
 }
 
 //main file
@@ -191,7 +223,9 @@ int main() {
 
 	initGameAPI(&vm);
 	initActorAPI(&vm);
-	Toy_setOpaqueAttributeHandler(handleActorAttributes);
+	Toy_setOpaqueAttributeHandler(dispatchOpaqueAttributes);
+
+	// inspect_bytecode(entryCode);
 
 	Toy_runVM(&vm);
 	Toy_resetVM(&vm, false, false); //leave in a valid, but unset state
@@ -209,12 +243,6 @@ int main() {
 	}
 
 	while (!WindowShouldClose()) {
-		//TODO: player input
-		// if (IsKeyDown(KEY_UP)) player.position.y -= 5.0f;
-		// if (IsKeyDown(KEY_DOWN)) player.position.y += 5.0f;
-		// if (IsKeyDown(KEY_LEFT)) player.position.x -= 5.0f;
-		// if (IsKeyDown(KEY_RIGHT)) player.position.x += 5.0f;
-
 		//process the actors (if possible)
 		processActors(&vm);
 
