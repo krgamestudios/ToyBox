@@ -1,10 +1,11 @@
-//debug testing
-var counter = 0;
+//quick and dirty RNG
 var randi: Int = 69420;
 fn rand() {
-	return randi = randi * 1664525 + 1013904223; //can be negative
+	return randi = randi * 1664525 + 1013904223; //overflows to a negative, which is fine
 }
 
+//wander like a zombie
+var counter = 0;
 fn wander(actor: Opaque) {
 	actor.setX(actor.x + rand() % 5);
 	actor.setY(actor.y + rand() % 5);
@@ -12,43 +13,36 @@ fn wander(actor: Opaque) {
 	counter++;
 }
 
-//TODO: general purpose math functions
-//TODO: optimize away single-line blocks in the AST
-
 //player controlled character
 var playerMaxMotion: Int = 5;
 var playerMotionX: Int = 0;
 var playerMotionY: Int = 0;
 
 fn playerOnFrame(player: Opaque) {
-	//accept input
-	if (Keyboard.UP) {
-		playerMotionY -= 5;
-	}
-	if (Keyboard.DOWN) {
-		playerMotionY += 5;
-	}
-	if (Keyboard.LEFT) {
-		playerMotionX -= 5;
-	}
-	if (Keyboard.RIGHT) {
-		playerMotionX += 5;
-	}
+	//handle keyboard input
+	if (KeyPressed.UP) playerMotionY -= 5;
+	if (KeyPressed.DOWN) playerMotionY += 5;
+	if (KeyPressed.LEFT) playerMotionX -= 5;
+	if (KeyPressed.RIGHT) playerMotionX += 5;
 
-//	print playerMotionX;
-//	print playerMotionY;
-//	print playerMaxMotion;
-//	print -playerMaxMotion;
+	if (KeyReleased.UP) playerMotionY = min(playerMotionY + 5, 0);
+	if (KeyReleased.DOWN) playerMotionY = max(playerMotionY - 5, 0);
+	if (KeyReleased.LEFT) playerMotionX = min(playerMotionX + 5, 0);
+	if (KeyReleased.RIGHT) playerMotionX = max(playerMotionX - 5, 0);
 
-	//cap the speed
-	if (playerMotionX > playerMaxMotion) playerMotionX = playerMaxMotion;
-	if (playerMotionX < -playerMaxMotion) playerMotionX = -playerMaxMotion;
-	if (playerMotionY > playerMaxMotion) playerMotionY = playerMaxMotion;
-	if (playerMotionY < -playerMaxMotion) playerMotionY = -playerMaxMotion;
+	//cap the max speed
+	playerMotionX = min(max(playerMotionX, -playerMaxMotion), playerMaxMotion);
+	playerMotionY = min(max(playerMotionY, -playerMaxMotion), playerMaxMotion);
+
+	//shortcut for normalized diagonal movement
+	var mod = 1;
+	if (playerMotionX != 0 && playerMotionY != 0) {
+		mod = 0.707;
+	}
 
 	//move the player
-	player.setX(player.x + playerMotionX);
-	player.setY(player.y + playerMotionY);
+	player.setX(player.x + floor(playerMotionX * mod));
+	player.setY(player.y + floor(playerMotionY * mod));
 }
 
 //when the game is ready, load the "zombie" sprite
@@ -68,9 +62,12 @@ fn onReady() {
 
 fn onFrame() {
 	//debug
-//	print Keyboard.A;
 }
 
 //example API for the game
 initScreen(1280, 720, "Oh no, Zombies!");
 initLoop(onReady, onFrame, null);
+
+
+
+//TODO: optimize away single-line blocks in the AST

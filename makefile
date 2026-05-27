@@ -17,7 +17,7 @@ export TOY_OUTDIR=../$(VAMP_OUTDIR)
 export TOY_OBJDIR=$(VAMP_OBJDIR)
 
 #targets
-all: $(VAMP_OUTDIR) Toy source
+all: $(VAMP_OUTDIR) Toy tools source
 
 .PHONY: source
 source:
@@ -26,6 +26,11 @@ source:
 .PHONY: Toy
 Toy:
 	$(MAKE) -C $(TOY_SOURCEDIR)
+
+.PHONY: tools
+tools:
+	cp Toy/repl/*library* $(VAMP_SOURCEDIR)
+	cp Toy/repl/*inspector* $(VAMP_SOURCEDIR)
 
 #util targets
 $(VAMP_OUTDIR):

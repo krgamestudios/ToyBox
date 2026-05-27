@@ -116,13 +116,25 @@ KeyboardMap keyboardMap[] = {
 	{0, NULL},
 };
 
-KeyboardData keyboardData = { //NOTE: it is just a dummy struct right now so the API looks nice
+KeyboardData keyboardData = {
 	.type = OPAQUE_KEYBOARD,
+	.callback = &IsKeyDown,
+};
+
+KeyboardData keyPressedData = {
+	.type = OPAQUE_KEY_PRESSED,
+	.callback = &IsKeyPressed,
+};
+
+KeyboardData keyReleasedData = {
+	.type = OPAQUE_KEY_RELEASED,
+	.callback = &IsKeyReleased,
 };
 
 Toy_Value handleKeyboardAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attribute) {
 	(void)vm;
-	(void)compound;
+
+	KeyboardData* kd = (KeyboardData*)TOY_VALUE_AS_OPAQUE(compound);
 
 	Toy_String* string = TOY_VALUE_AS_STRING(attribute);
 	const char* cstr = string->leaf.data;
@@ -130,7 +142,7 @@ Toy_Value handleKeyboardAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value att
 	//find the mapped value, if available
 	for (KeyboardMap* ptr = keyboardMap; ptr->cstr != NULL; ptr++) {
 		if (strlen(ptr->cstr) == strlen(cstr) && strncmp(cstr, ptr->cstr, strlen(ptr->cstr)) == 0) {
-			bool result = IsKeyPressed(ptr->raykey);
+			bool result = kd->callback(ptr->raykey);
 			return TOY_VALUE_FROM_BOOLEAN(result);
 		}
 	}

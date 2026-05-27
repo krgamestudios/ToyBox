@@ -11,11 +11,14 @@
 #include "keyboard.h"
 #include "actor.h"
 
+#include "standard_library.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 // #include "bytecode_inspector.h"
+// #include "bucket_inspector.h"
 
 //utils
 unsigned char* readFile(char* path, int* size) {
@@ -160,6 +163,8 @@ Toy_Value dispatchOpaqueAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value att
 
 	switch(*type) {
 		case OPAQUE_KEYBOARD:
+		case OPAQUE_KEY_PRESSED:
+		case OPAQUE_KEY_RELEASED:
 			return handleKeyboardAttributes(vm, compound, attribute);
 
 		case OPAQUE_ACTOR:
@@ -197,10 +202,22 @@ void initGameAPI(Toy_VM* vm) {
 		Toy_freeString(key);
 	}
 
-	//declare keyboard opaque
-	Toy_String* keyboardString = Toy_toString(&vm->memoryBucket, "Keyboard");
-	Toy_declareScope(vm->scope, keyboardString, TOY_VALUE_OPAQUE, TOY_OPAQUE_FROM_POINTER(&keyboardData), true);
-	Toy_freeString(keyboardString);
+	//declare input opaques
+	{
+		Toy_String* name = Toy_toString(&vm->memoryBucket, "Keyboard");
+		Toy_declareScope(vm->scope, name, TOY_VALUE_OPAQUE, TOY_OPAQUE_FROM_POINTER(&keyboardData), true);
+		Toy_freeString(name);
+	}
+	{
+		Toy_String* name = Toy_toString(&vm->memoryBucket, "KeyPressed");
+		Toy_declareScope(vm->scope, name, TOY_VALUE_OPAQUE, TOY_OPAQUE_FROM_POINTER(&keyPressedData), true);
+		Toy_freeString(name);
+	}
+	{
+		Toy_String* name = Toy_toString(&vm->memoryBucket, "KeyReleased");
+		Toy_declareScope(vm->scope, name, TOY_VALUE_OPAQUE, TOY_OPAQUE_FROM_POINTER(&keyReleasedData), true);
+		Toy_freeString(name);
+	}
 }
 
 //main file
@@ -221,6 +238,7 @@ int main() {
 	Toy_initVM(&vm);
 	Toy_bindVM(&vm, entryCode, NULL);
 
+	initStandardLibrary(&vm);
 	initGameAPI(&vm);
 	initActorAPI(&vm);
 	Toy_setOpaqueAttributeHandler(dispatchOpaqueAttributes);
@@ -270,6 +288,8 @@ int main() {
 	}
 
 	freeActorAPI(&vm);
+
+	// inspect_bucket(&vm.memoryBucket);
 
 	Toy_freeVM(&vm);
 	free(entryCode);
