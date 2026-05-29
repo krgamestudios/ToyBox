@@ -67,7 +67,3 @@ fn onFrame() {
 //example API for the game
 initScreen(1280, 720, "Oh no, Zombies!");
 initLoop(onReady, onFrame, null);
-
-
-
-//TODO: optimize away single-line blocks in the AST

@@ -1,14 +1,12 @@
 {
 	"better-todo-tree.filtering.includeGlobs": [
-		"**/repl/**",
-		"**/scripts/**",
 		"**/source/**",
-		"**/tests/**",
-		"**/tools/**",
+		"**/assets/**",
 	],
 	"better-todo-tree.filtering.excludeGlobs": [
 		"**/obj/**",
 		"**/out/**",
+		"**/Toy/**"
 	],
 	"better-todo-tree.general.tags": [
 		"URGENT",
