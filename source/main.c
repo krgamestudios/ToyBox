@@ -19,6 +19,7 @@
 
 // #include "bytecode_inspector.h"
 // #include "bucket_inspector.h"
+#include "stack_inspector.h"
 
 //utils
 unsigned char* readFile(char* path, int* size) {
@@ -290,6 +291,7 @@ int main() {
 	freeActorAPI(&vm);
 
 	// inspect_bucket(&vm.memoryBucket);
+	inspect_stack(vm.stack);
 
 	Toy_freeVM(&vm);
 	free(entryCode);

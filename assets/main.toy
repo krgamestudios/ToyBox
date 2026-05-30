@@ -10,10 +10,25 @@ fn wander(actor: Opaque) {
 	actor.setX(actor.x + rand() % 5);
 	actor.setY(actor.y + rand() % 5);
 
+	if (playerRef.x > actor.x) {
+		actor.setX(actor.x + 1);
+	}
+	else {
+		actor.setX(actor.x - 1);
+	}
+
+	if (playerRef.y > actor.y) {
+		actor.setY(actor.y + 1);
+	}
+	else {
+		actor.setY(actor.y - 1);
+	}
+
 	counter++;
 }
 
 //player controlled character
+var playerRef: Opaque = null;
 var playerMaxMotion: Int = 5;
 var playerMotionX: Int = 0;
 var playerMotionY: Int = 0;
@@ -57,7 +72,7 @@ fn onReady() {
 
 	//spawn the player
 	loadSprite("player", "assets/parvati.png", 32, 32);
-	spawnActorAt("player", playerOnFrame, 300, 300);
+	playerRef = spawnActorAt("player", playerOnFrame, 300, 300);
 }
 
 fn onFrame() {

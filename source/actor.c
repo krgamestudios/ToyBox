@@ -81,7 +81,7 @@ static void api_loadSprite(Toy_VM* vm, Toy_FunctionNative* self) {
 }
 
 static void api_spawnActorAt(Toy_VM* vm, Toy_FunctionNative* self) {
-	//sprite, onStep, x, y -> void
+	//sprite, onStep, x, y -> Opaque(Actor)
 	(void)self;
 
 	//check for initialization
@@ -171,6 +171,10 @@ static void api_spawnActorAt(Toy_VM* vm, Toy_FunctionNative* self) {
 		.position = { TOY_VALUE_AS_INTEGER(xpos), TOY_VALUE_AS_INTEGER(ypos) },
 		.enabled = true,
 	};
+
+	//leave the actor on the stack
+	Toy_Value value = TOY_OPAQUE_FROM_POINTER(newActorPtr);
+	Toy_pushStack(&vm->stack, value);
 
 	Toy_freeValue(spriteValue);
 	Toy_freeValue(key);
