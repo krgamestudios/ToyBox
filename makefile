@@ -7,21 +7,21 @@
 #TODO: add debug & release build options, at least for Toy
 
 #directories
-export VAMP_SOURCEDIR=source
-export VAMP_OUTDIR=out
-export VAMP_OBJDIR=obj
+export BOX_SOURCEDIR=source
+export BOX_OUTDIR=out
+export BOX_OBJDIR=obj
 
 #Override Toy's build destination
 export TOY_SOURCEDIR=Toy/source
-export TOY_OUTDIR=../$(VAMP_OUTDIR)
-export TOY_OBJDIR=$(VAMP_OBJDIR)
+export TOY_OUTDIR=../$(BOX_OUTDIR)
+export TOY_OBJDIR=$(BOX_OBJDIR)
 
 #targets
-all: $(VAMP_OUTDIR) Toy tools source
+all: $(BOX_OUTDIR) Toy tools source
 
 .PHONY: source
 source:
-	$(MAKE) -C $(VAMP_SOURCEDIR)
+	$(MAKE) -C $(BOX_SOURCEDIR)
 
 .PHONY: Toy
 Toy:
@@ -29,12 +29,12 @@ Toy:
 
 .PHONY: tools
 tools:
-	cp Toy/repl/*library* $(VAMP_SOURCEDIR)
-	cp Toy/repl/*inspector* $(VAMP_SOURCEDIR)
+	cp Toy/repl/*library* $(BOX_SOURCEDIR)
+	cp Toy/repl/*inspector* $(BOX_SOURCEDIR)
 
 #util targets
-$(VAMP_OUTDIR):
-	mkdir $(VAMP_OUTDIR)
+$(BOX_OUTDIR):
+	mkdir $(BOX_OUTDIR)
 
 #util commands
 .PHONY: clean

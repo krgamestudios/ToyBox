@@ -1,10 +1,8 @@
-# VampireToyvivors
+# ToyBox
 
 A test game for The Toy Programming Langauge. Requires raylib and Toy by default.
 
 See https://toylang.com/ for details.
-
-Note: Vampire Survivors is a simple design, so it makes sense to test Toy with it - this project isn't intended for retail.
 
 ## Raylib for RPi
 
