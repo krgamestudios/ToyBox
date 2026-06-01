@@ -27,18 +27,27 @@ source:
 Toy:
 	$(MAKE) -C $(TOY_SOURCEDIR)
 
+#copy the various tools into the source repo
 .PHONY: tools
 tools:
 	cp Toy/repl/*library* $(BOX_SOURCEDIR)
 	cp Toy/repl/*inspector* $(BOX_SOURCEDIR)
 
-#util targets
+.PHONY: tools
+tools-clean:
+ifeq ($(shell uname),Linux)
+	find . -type f -wholename "./$(BOX_SOURCEDIR)/*inspector*" -delete
+	find . -type f -wholename "./$(BOX_SOURCEDIR)/*library*" -delete
+else
+	@echo "tools-clean failed, check the makefile and add this platform"
+endif
+
+#utils
 $(BOX_OUTDIR):
 	mkdir $(BOX_OUTDIR)
 
-#util commands
 .PHONY: clean
-clean:
+clean: tools-clean
 ifeq ($(shell uname),Linux)
 	find . -type f -name '*.o' -delete
 	find . -type f -name '*.a' -delete

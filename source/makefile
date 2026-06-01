@@ -19,7 +19,7 @@ GAME_OBJDIR=$(BOX_OBJDIR)
 #file names
 GAME_SOURCEFILES=$(wildcard $(GAME_SOURCEDIR)/*.c)
 GAME_OBJFILES=$(addprefix $(GAME_OBJDIR)/,$(notdir $(GAME_SOURCEFILES:.c=.o)))
-GAME_TARGETNAME=BOXires
+GAME_TARGETNAME=toybox
 
 #file extensions
 ifeq ($(OS),Windows_NT)
