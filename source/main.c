@@ -165,6 +165,11 @@ Toy_Value dispatchOpaqueAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value att
 		case OPAQUE_KEY_RELEASED:
 			return handleKeyboardAttributes(vm, compound, attribute);
 
+		case OPAQUE_MOUSE:
+		case OPAQUE_MOUSE_PRESSED:
+		case OPAQUE_MOUSE_RELEASED:
+			return handleMouseAttributes(vm, compound, attribute);
+
 		case OPAQUE_ACTOR:
 			return handleActorAttributes(vm, compound, attribute);
 
@@ -202,7 +207,7 @@ void initGameAPI(Toy_VM* vm) {
 		Toy_freeString(key);
 	}
 
-	//declare input opaques
+	//declare keyboard opaques
 	{
 		Toy_String* name = Toy_toString(&vm->memoryBucket, "Keyboard");
 		Toy_declareScope(vm->scope, name, TOY_VALUE_OPAQUE, TOY_OPAQUE_FROM_POINTER(&keyboardData), true);
@@ -216,6 +221,23 @@ void initGameAPI(Toy_VM* vm) {
 	{
 		Toy_String* name = Toy_toString(&vm->memoryBucket, "KeyReleased");
 		Toy_declareScope(vm->scope, name, TOY_VALUE_OPAQUE, TOY_OPAQUE_FROM_POINTER(&keyReleasedData), true);
+		Toy_freeString(name);
+	}
+
+	//declare mouse opaques
+	{
+		Toy_String* name = Toy_toString(&vm->memoryBucket, "Mouse");
+		Toy_declareScope(vm->scope, name, TOY_VALUE_OPAQUE, TOY_OPAQUE_FROM_POINTER(&mouseData), true);
+		Toy_freeString(name);
+	}
+	{
+		Toy_String* name = Toy_toString(&vm->memoryBucket, "MousePressed");
+		Toy_declareScope(vm->scope, name, TOY_VALUE_OPAQUE, TOY_OPAQUE_FROM_POINTER(&mousePressedData), true);
+		Toy_freeString(name);
+	}
+	{
+		Toy_String* name = Toy_toString(&vm->memoryBucket, "MouseReleased");
+		Toy_declareScope(vm->scope, name, TOY_VALUE_OPAQUE, TOY_OPAQUE_FROM_POINTER(&mouseReleasedData), true);
 		Toy_freeString(name);
 	}
 
