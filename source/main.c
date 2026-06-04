@@ -9,6 +9,7 @@
 #include "toy_attributes.h"
 
 #include "keyboard.h"
+#include "mouse.h"
 #include "actor.h"
 
 #include "standard_library.h"
@@ -16,10 +17,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-// #include "bytecode_inspector.h"
-// #include "bucket_inspector.h"
-#include "stack_inspector.h"
 
 //utils
 unsigned char* readFile(char* path, int* size) {
@@ -195,6 +192,8 @@ void initGameAPI(Toy_VM* vm) {
 		exit(-1);
 	}
 
+	Toy_setOpaqueAttributeHandler(dispatchOpaqueAttributes);
+
 	//declare each function in the global scope
 	for (int i = 0; callbackPairs[i].name; i++) {
 		Toy_String* key = Toy_createStringLength(&(vm->memoryBucket), callbackPairs[i].name, strlen(callbackPairs[i].name));
@@ -219,6 +218,9 @@ void initGameAPI(Toy_VM* vm) {
 		Toy_declareScope(vm->scope, name, TOY_VALUE_OPAQUE, TOY_OPAQUE_FROM_POINTER(&keyReleasedData), true);
 		Toy_freeString(name);
 	}
+
+	//actors
+	initActorAPI(vm);
 }
 
 //main file
@@ -241,10 +243,6 @@ int main() {
 
 	initStandardLibrary(&vm);
 	initGameAPI(&vm);
-	initActorAPI(&vm);
-	Toy_setOpaqueAttributeHandler(dispatchOpaqueAttributes);
-
-	// inspect_bytecode(entryCode);
 
 	Toy_runVM(&vm);
 	Toy_resetVM(&vm, false, false); //leave in a valid, but unset state
@@ -289,9 +287,6 @@ int main() {
 	}
 
 	freeActorAPI(&vm);
-
-	// inspect_bucket(&vm.memoryBucket);
-	inspect_stack(vm.stack);
 
 	Toy_freeVM(&vm);
 	free(entryCode);

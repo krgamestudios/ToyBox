@@ -1,6 +1,12 @@
 #include "keyboard.h"
 
-#include "string.h"
+#include <string.h>
+
+//wraps raylib's 'KeyboardKey' enum to a c-string
+typedef struct KeyboardMap {
+	int raykey;
+	char* cstr;
+} KeyboardMap;
 
 KeyboardMap keyboardMap[] = {
 	{KEY_NULL, ""},
