@@ -9,7 +9,7 @@
 typedef struct SpriteData {
 	Texture2D texture;
 	Rectangle rect;
-	//TODO: animation
+	//TODO: animation stuff goes here
 } SpriteData;
 
 //Actors loaded from scripts

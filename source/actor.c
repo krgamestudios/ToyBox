@@ -190,9 +190,9 @@ typedef struct CallbackPairs {
 } CallbackPairs;
 
 static CallbackPairs callbackPairs[] = {
-	{"loadSprite", api_loadSprite},
+	{"LoadSprite", api_loadSprite},
 	// {"unloadSprite", unloadSprite},
-	{"spawnActorAt", api_spawnActorAt},
+	{"SpawnActorAt", api_spawnActorAt},
 	// {"despawnActor", despawnActor},
 
 	{NULL, NULL},

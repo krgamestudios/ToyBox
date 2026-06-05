@@ -253,8 +253,8 @@ typedef struct CallbackPairs {
 } CallbackPairs;
 
 static CallbackPairs callbackPairs[] = {
-	{"initScreen", api_initScreen},
-	{"initLoop", api_initLoop},
+	{"InitScreen", api_initScreen},
+	{"InitLoop", api_initLoop},
 	{NULL, NULL},
 };
 

@@ -17,7 +17,7 @@ export TOY_OUTDIR=../$(BOX_OUTDIR)
 export TOY_OBJDIR=$(BOX_OBJDIR)
 
 #targets
-all: $(BOX_OUTDIR) Toy tools source
+all: $(BOX_OUTDIR) Toy tools source tools-clean
 
 .PHONY: source
 source:
@@ -25,7 +25,7 @@ source:
 
 .PHONY: Toy
 Toy:
-	$(MAKE) -C $(TOY_SOURCEDIR)
+	$(MAKE) -C $(TOY_SOURCEDIR) -k
 
 #copy the various tools into the source repo
 .PHONY: tools
@@ -33,7 +33,7 @@ tools:
 	cp Toy/repl/*library* $(BOX_SOURCEDIR)
 	cp Toy/repl/*inspector* $(BOX_SOURCEDIR)
 
-.PHONY: tools
+.PHONY: tools-clean
 tools-clean:
 ifeq ($(shell uname),Linux)
 	find . -type f -wholename "./$(BOX_SOURCEDIR)/*inspector*" -delete

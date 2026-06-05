@@ -62,17 +62,17 @@ fn playerOnFrame(player: Opaque) {
 
 //when the game is ready, load the "zombie" sprite
 fn onReady() {
-	loadSprite("zombie", "assets/parvati.png", 32, 32);
+	LoadSprite("zombie", "assets/parvati.png", 32, 32);
 
 	//spawn some "zombies" looking for brains
-	spawnActorAt("zombie", wander, 250, 250);
-	spawnActorAt("zombie", wander, 250, 500);
-	spawnActorAt("zombie", wander, 500, 250);
-	spawnActorAt("zombie", wander, 500, 500);
+	SpawnActorAt("zombie", wander, 250, 250);
+	SpawnActorAt("zombie", wander, 250, 500);
+	SpawnActorAt("zombie", wander, 500, 250);
+	SpawnActorAt("zombie", wander, 500, 500);
 
 	//spawn the player
-	loadSprite("player", "assets/parvati.png", 32, 32);
-	playerRef = spawnActorAt("player", playerOnFrame, 300, 300);
+	LoadSprite("player", "assets/parvati.png", 32, 32);
+	playerRef = SpawnActorAt("player", playerOnFrame, 300, 300);
 }
 
 fn onFrame() {
@@ -80,5 +80,5 @@ fn onFrame() {
 }
 
 //example API for the game
-initScreen(1280, 720, "Oh no, Zombies!");
-initLoop(onReady, onFrame, null);
+InitScreen(1280, 720, "Oh no, Zombies!");
+InitLoop(onReady, onFrame, null);

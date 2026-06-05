@@ -1,0 +1,24 @@
+Basic features I need:
+
+[ ] Tile Grid
+[ ] Tile Sheet
+[ ] Animated Sprites
+[ ] Collision Detection
+
+## TileGrid
+
+TileGrid is a baked-in library, providing game map utilities.
+
+It consists of a zero-indexed 2d grid of tiles (which can be simple integers), which are easily accessed with API calls.
+
+```toy
+//global function for setting things up
+InitTileGrid(28, 31, null); //can take a pre-defined state array if desired
+
+//API via opaques
+TileGrid.SetTile(0, 0, 1);
+TileGrid.GetTile(0, 0);
+```
+
+In addition, this will also need a tile sheet for rendering, but this can be built into the above system as needed.
+

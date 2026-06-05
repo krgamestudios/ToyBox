@@ -9,4 +9,5 @@ typedef enum OpaqueType {
 	OPAQUE_MOUSE_PRESSED,
 	OPAQUE_MOUSE_RELEASED,
 	OPAQUE_ACTOR,
+	OPAQUE_TILE_GRID,
 } OpaqueType;
