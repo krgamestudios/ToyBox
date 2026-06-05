@@ -75,9 +75,9 @@ unsigned char* makeCodeFromSource(const char* source) {
 typedef struct Settings {
 	bool error;
 	bool help;
-	bool version; //TODO
+	bool version; //TODO: version info missing
 	const char* script;
-	bool verbose; //TODO
+	bool verbose; //TODO: verbose info missing
 } Settings;
 
 void usageInfo(int argc, const char* argv[]) {
