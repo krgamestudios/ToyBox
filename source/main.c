@@ -19,7 +19,7 @@
 #include <string.h>
 
 //utils
-unsigned char* readFile(char* path, int* size) {
+unsigned char* readFile(const char* path, int* size) {
 	//open the file
 	FILE* file = fopen(path, "rb");
 	if (file == NULL) {
@@ -69,6 +69,73 @@ unsigned char* makeCodeFromSource(const char* source) {
 	Toy_freeBucket(&bucket);
 
 	return code;
+}
+
+//command line arguments
+typedef struct Settings {
+	bool error;
+	bool help;
+	bool version; //TODO
+	const char* script;
+	bool verbose; //TODO
+} Settings;
+
+void usageInfo(int argc, const char* argv[]) {
+	(void)argc;
+	printf("Usage: %s [ -h | -f script.toy ]\n\n", argv[0]);
+}
+
+void helpInfo(int argc, const char* argv[]) {
+	usageInfo(argc, argv);
+
+	printf("ToyBox, a test game for The Toy Programming Langauge. Requires raylib and Toy by default.\n\nSee https://toylang.com for details.\n\n");
+
+	printf("  -h, --help\t\t\tShow this help then exit.\n");
+	// printf("  -v, --version\t\t\tShow version and copyright information then exit.\n");
+	printf("  -f, --file script\t\tStart the game with the given script.\n");
+	// printf("  -d, --verbose\t\tPrint debugging information about Toy's internals.\n");
+
+	printf("\n");
+}
+
+Settings parseSettings(int argc, const char* argv[]) {
+	Settings settings = {0};
+
+	for (int i = 1; i < argc; i++) {
+		if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--help")) {
+			settings.help = true;
+		}
+
+		else if (!strcmp(argv[i], "-v") || !strcmp(argv[i], "--version")) {
+			settings.version = true;
+		}
+
+		else if (!strcmp(argv[i], "-f") || !strcmp(argv[i], "--file")) {
+			if (argc <= i + 1) {
+				settings.error = true;
+				break;
+			}
+
+			if (settings.script != NULL) {
+				fprintf(stderr, TOY_CC_ERROR "ERROR: No more than one script file allowed\n" TOY_CC_RESET);
+				settings.error = true;
+				break;
+			}
+
+			i++;
+			settings.script = argv[i];
+		}
+
+		else if (!strcmp(argv[i], "-d") || !strcmp(argv[i], "--verbose")) {
+			settings.verbose = true;
+		}
+
+		else {
+			settings.error = true;
+		}
+	}
+
+	return settings;
 }
 
 //static pointers
@@ -246,13 +313,30 @@ void initGameAPI(Toy_VM* vm) {
 }
 
 //main file
-int main() {
+int main(int argc, const char* argv[]) {
+	//read settings and handle errors
+	Settings settings = parseSettings(argc, argv);
+	if (settings.error) {
+		usageInfo(argc, argv);
+		return 1;
+	}
+	if (settings.help) {
+		helpInfo(argc, argv);
+		return 0;
+	}
+
 	//load the entry point
 	int size = 0;
-	const char* source = (char*)readFile("assets/main.toy", &size);
+	const char* source = (char*)readFile(settings.script != NULL ? settings.script : "assets/main.toy", &size);
 
 	if (!source) {
-		fprintf(stderr, "File read error: %d\n", size);
+		fprintf(stderr, TOY_CC_ERROR "File read error: " TOY_CC_RESET);
+		if (size == -1) {
+			fprintf(stderr, TOY_CC_ERROR "Couldn't find '%s'\n" TOY_CC_RESET, settings.script != NULL ? settings.script : "assets/main.toy");
+		}
+		else {
+			fprintf(stderr, TOY_CC_ERROR "Cause unknown\n" TOY_CC_RESET);
+		}
 		return -1;
 	}
 
