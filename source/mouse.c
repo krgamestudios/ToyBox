@@ -1,5 +1,6 @@
 #include "mouse.h"
 
+#include <stdio.h>
 #include <string.h>
 
 MouseData mouseData = {
@@ -65,6 +66,11 @@ Toy_Value handleMouseAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attrib
 		return TOY_VALUE_FROM_INTEGER(result);
 	}
 
-	//unknown
-	return TOY_VALUE_FROM_NULL();
+	else {
+		//unknown
+		char buffer[256];
+		snprintf(buffer, 256, "Unknown mouse attribute '%s'", cstr);
+		Toy_error(buffer);
+		return TOY_VALUE_FROM_NULL();
+	}
 }

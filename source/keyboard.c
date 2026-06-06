@@ -1,5 +1,6 @@
 #include "keyboard.h"
 
+#include <stdio.h>
 #include <string.h>
 
 //wraps raylib's 'KeyboardKey' enum to a c-string
@@ -153,6 +154,9 @@ Toy_Value handleKeyboardAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value att
 		}
 	}
 
-	//unknown key
+	//unknown
+	char buffer[256];
+	snprintf(buffer, 256, "Unknown keyboard attribute '%s'", cstr);
+	Toy_error(buffer);
 	return TOY_VALUE_FROM_NULL();
 }

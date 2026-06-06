@@ -1,3 +1,31 @@
 //TODO: Recreate the classic arcade game Pacman, utilizing a custom tile grid for the maze
 
-//https://shaunlebron.github.io/pacman-mazegen/
+//NOTE: https://shaunlebron.github.io/pacman-mazegen/
+
+
+fn onReady() {
+	print TileGrid.width;
+	print TileGrid.height;
+
+	print TileGrid.getTile(10, 10);
+
+	TileGrid.setTile(10, 10, 42);
+
+	print TileGrid.getTile(10, 10);
+}
+
+
+InitScreen(1280, 720, "Holy Puck!");
+InitLoop(onReady, null, null);
+InitTileGrid(32, 48, null);
+
+
+
+
+
+//This also works with an 'initial' array
+
+//InitScreen(1280, 720, "No pucks given!");
+//InitLoop(null, null, null);
+//InitTileGrid(3, 3, [1, 2, 3, 4, 5, 6, 7, 8, 9]);
+//print TileGrid.getTile(1, 1);

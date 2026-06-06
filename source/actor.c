@@ -201,7 +201,7 @@ static CallbackPairs callbackPairs[] = {
 //exposed
 void initActorAPI(Toy_VM* vm) {
 	if (vm == NULL || vm->scope == NULL || vm->memoryBucket == NULL) {
-		fprintf(stderr, TOY_CC_ERROR "ERROR: Can't initialize standard library, exiting\n" TOY_CC_RESET);
+		fprintf(stderr, TOY_CC_ERROR "ERROR: Can't initialize actor API, exiting\n" TOY_CC_RESET);
 		exit(-1);
 	}
 
@@ -314,7 +314,7 @@ void drawActors(Toy_VM* vm) {
 	}
 }
 
-//opaque bindings
+//opaque attributes
 static void attr_actorSetX(Toy_VM* vm, Toy_FunctionNative* self) {
 	(void)self;
 
@@ -354,6 +354,7 @@ Toy_Value handleActorAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attrib
 
 	ActorData* actor = (ActorData*)TOY_VALUE_AS_OPAQUE(compound);
 
+	//TODO: could extract the cstr for faster processing
 	if (TOY_VALUE_AS_STRING(attribute)->info.length == 1 && strncmp(TOY_VALUE_AS_STRING(attribute)->leaf.data, "x", 1)  == 0) {
 		return TOY_VALUE_FROM_INTEGER(actor->position.x);
 	}

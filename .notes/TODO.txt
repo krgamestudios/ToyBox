@@ -1,6 +1,6 @@
 Basic features I need:
 
-[ ] Tile Grid
+[X] Tile Grid
 [ ] Tile Sheet
 [ ] Animated Sprites
 [ ] Collision Detection

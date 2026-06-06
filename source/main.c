@@ -11,6 +11,7 @@
 #include "keyboard.h"
 #include "mouse.h"
 #include "actor.h"
+#include "tile_grid.h"
 
 #include "standard_library.h"
 
@@ -215,7 +216,7 @@ void api_initLoop(Toy_VM* vm, Toy_FunctionNative* self) {
 	}
 }
 
-//opaque dispatch
+//API opaque dispatch
 Toy_Value dispatchOpaqueAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attribute) {
 	//check for correct types
 	if (!TOY_VALUE_IS_OPAQUE(compound) || !TOY_VALUE_IS_STRING(attribute) || TOY_VALUE_AS_STRING(attribute)->info.type != TOY_STRING_LEAF) {
@@ -240,6 +241,9 @@ Toy_Value dispatchOpaqueAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value att
 		case OPAQUE_ACTOR:
 			return handleActorAttributes(vm, compound, attribute);
 
+		case OPAQUE_TILE_GRID:
+			return handleTileGridAttributes(vm, compound, attribute);
+
 		default:
 			fprintf(stderr, TOY_CC_ERROR "ERROR: Bad opaque type found in 'handleOpaqueAttributes'" TOY_CC_RESET "\n");
 			return TOY_VALUE_FROM_NULL(); //do not free the params here
@@ -255,8 +259,16 @@ typedef struct CallbackPairs {
 static CallbackPairs callbackPairs[] = {
 	{"InitScreen", api_initScreen},
 	{"InitLoop", api_initLoop},
+	{"InitTileGrid", api_initTileGrid},
 	{NULL, NULL},
 };
+
+//quick and dirty template for each opaque object
+#define DECLARE_OPAQUE(NAME, DATAPTR, SCOPE, BUCKETHANDLE) { \
+	Toy_String* name = Toy_toString(BUCKETHANDLE, NAME); \
+	Toy_declareScope(SCOPE, name, TOY_VALUE_OPAQUE, TOY_OPAQUE_FROM_POINTER(DATAPTR), true); \
+	Toy_freeString(name); \
+}
 
 void initGameAPI(Toy_VM* vm) {
 	if (vm == NULL || vm->scope == NULL || vm->memoryBucket == NULL) {
@@ -274,39 +286,15 @@ void initGameAPI(Toy_VM* vm) {
 		Toy_freeString(key);
 	}
 
-	//declare keyboard opaques
-	{
-		Toy_String* name = Toy_toString(&vm->memoryBucket, "Keyboard");
-		Toy_declareScope(vm->scope, name, TOY_VALUE_OPAQUE, TOY_OPAQUE_FROM_POINTER(&keyboardData), true);
-		Toy_freeString(name);
-	}
-	{
-		Toy_String* name = Toy_toString(&vm->memoryBucket, "KeyPressed");
-		Toy_declareScope(vm->scope, name, TOY_VALUE_OPAQUE, TOY_OPAQUE_FROM_POINTER(&keyPressedData), true);
-		Toy_freeString(name);
-	}
-	{
-		Toy_String* name = Toy_toString(&vm->memoryBucket, "KeyReleased");
-		Toy_declareScope(vm->scope, name, TOY_VALUE_OPAQUE, TOY_OPAQUE_FROM_POINTER(&keyReleasedData), true);
-		Toy_freeString(name);
-	}
+	DECLARE_OPAQUE("Keybaord", &keyboardData, vm->scope, &vm->memoryBucket);
+	DECLARE_OPAQUE("KeyPressed", &keyPressedData, vm->scope, &vm->memoryBucket);
+	DECLARE_OPAQUE("KeyReleased", &keyReleasedData, vm->scope, &vm->memoryBucket);
 
-	//declare mouse opaques
-	{
-		Toy_String* name = Toy_toString(&vm->memoryBucket, "Mouse");
-		Toy_declareScope(vm->scope, name, TOY_VALUE_OPAQUE, TOY_OPAQUE_FROM_POINTER(&mouseData), true);
-		Toy_freeString(name);
-	}
-	{
-		Toy_String* name = Toy_toString(&vm->memoryBucket, "MousePressed");
-		Toy_declareScope(vm->scope, name, TOY_VALUE_OPAQUE, TOY_OPAQUE_FROM_POINTER(&mousePressedData), true);
-		Toy_freeString(name);
-	}
-	{
-		Toy_String* name = Toy_toString(&vm->memoryBucket, "MouseReleased");
-		Toy_declareScope(vm->scope, name, TOY_VALUE_OPAQUE, TOY_OPAQUE_FROM_POINTER(&mouseReleasedData), true);
-		Toy_freeString(name);
-	}
+	DECLARE_OPAQUE("Mouse", &mouseData, vm->scope, &vm->memoryBucket);
+	DECLARE_OPAQUE("MousePressed", &mousePressedData, vm->scope, &vm->memoryBucket);
+	DECLARE_OPAQUE("MouseReleased", &mouseReleasedData, vm->scope, &vm->memoryBucket);
+
+	DECLARE_OPAQUE("TileGrid", &tileGridData, vm->scope, &vm->memoryBucket);
 
 	//actors
 	initActorAPI(vm);
