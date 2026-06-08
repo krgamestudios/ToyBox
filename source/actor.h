@@ -2,22 +2,42 @@
 
 #include "opaque_type.h"
 #include "toy_vm.h"
+#include "toy_table.h"
 #include "toy_function.h"
 #include "raylib.h"
 
-//sprites loaded from disk
+//TODO: incomplete
+// var playerSprite = LoadSprite("assets/parvati.png", 32, 32);
+// playerSprite.AddAnimationState("idle-south", 0, 1); //offset 0, 1 frame
+// etc.
+//
+// var playerActor = SpawnActorAt(250, 300, playerSprite, playerCallback);
+
+//sprites loaded from disk, with zero or more states
 typedef struct SpriteData {
+	OpaqueType type;
 	Texture2D texture;
 	Rectangle rect;
-	//TODO: animation stuff goes here
+	Toy_Table* states;
 } SpriteData;
 
-//Actors loaded from scripts
+//assumes each state is a single row on the sprite sheet
+typedef struct SpriteState {
+	unsigned int offset;
+	unsigned int frameCount;
+} SpriteState;
+
+//Actors opaques loaded from scripts
 typedef struct ActorData {
 	OpaqueType type;
-	SpriteData* sprite;
-	Toy_Function* onStep;
+
+	SpriteData* spriteData;
+	SpriteState* spriteState;
+	unsigned int currentFrame;
+
 	Vector2 position;
+
+	Toy_Function* onStep;
 	bool enabled;
 } ActorData;
 

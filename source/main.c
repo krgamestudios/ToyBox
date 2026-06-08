@@ -19,6 +19,15 @@
 #include <stdlib.h>
 #include <string.h>
 
+static int errorAndContinueCallback(const char* msg) {
+	return fprintf(stderr, TOY_CC_ERROR "Error: %s" TOY_CC_RESET "\n", msg);
+}
+
+static int assertFailureAndExitCallback(const char* msg) {
+	fprintf(stderr, TOY_CC_ASSERT "Assert Failure: %s" TOY_CC_RESET "\n", msg);
+	exit(-1);
+}
+
 //utils
 unsigned char* readFile(const char* path, int* size) {
 	//open the file
@@ -238,8 +247,10 @@ Toy_Value dispatchOpaqueAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value att
 		case OPAQUE_MOUSE_RELEASED:
 			return handleMouseAttributes(vm, compound, attribute);
 
-		case OPAQUE_ACTOR:
+		case OPAQUE_ACTOR_DATA:
 			return handleActorAttributes(vm, compound, attribute);
+
+		//TODO: sprite data
 
 		case OPAQUE_TILE_GRID:
 			return handleTileGridAttributes(vm, compound, attribute);
@@ -302,6 +313,11 @@ void initGameAPI(Toy_VM* vm) {
 
 //main file
 int main(int argc, const char* argv[]) {
+	//not necessary, but nice to have
+	Toy_setPrintCallback(puts);
+	Toy_setErrorCallback(errorAndContinueCallback);
+	Toy_setAssertFailureCallback(assertFailureAndExitCallback);
+
 	//read settings and handle errors
 	Settings settings = parseSettings(argc, argv);
 	if (settings.error) {

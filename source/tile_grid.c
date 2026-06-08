@@ -22,18 +22,24 @@ void api_initTileGrid(Toy_VM* vm, Toy_FunctionNative* self) {
 	Toy_Value width = Toy_popStack(&vm->stack);
 
 	if (!TOY_VALUE_IS_INTEGER(width) || !TOY_VALUE_IS_INTEGER(height)) {
-		fprintf(stderr, TOY_CC_ERROR "ERROR: Bad types for 'width' & 'height' found in 'initTileGrid', exiting" TOY_CC_RESET "\n");
-		exit(-1);
+		char buffer[256];
+		sprintf(buffer, "Bad argument types found in 'initTileGrid' (width & height)");
+		Toy_error(buffer);
+		return;
 	}
 
 	if (!TOY_VALUE_IS_ARRAY(initial) && !TOY_VALUE_IS_NULL(initial)) {
-		fprintf(stderr, TOY_CC_ERROR "ERROR: Bad type for 'initial' found in 'initTileGrid', exiting" TOY_CC_RESET "\n");
-		exit(-1);
+		char buffer[256];
+		sprintf(buffer, "Bad argument types found in 'initTileGrid' (initial array)");
+		Toy_error(buffer);
+		return;
 	}
 
 	if (TOY_VALUE_AS_INTEGER(width) <= 0 || TOY_VALUE_AS_INTEGER(height) <= 0) {
-		fprintf(stderr, TOY_CC_ERROR "ERROR: 'width' & 'height' must be greater than 0 in 'initTileGrid', exiting" TOY_CC_RESET "\n");
-		exit(-1);
+		char buffer[256];
+		sprintf(buffer, "Bad argument values found in 'initTileGrid' ('width' & 'height' must be greater than '0')");
+		Toy_error(buffer);
+		return;
 	}
 
 	gridWidth = TOY_VALUE_AS_INTEGER(width);
@@ -53,7 +59,9 @@ void api_initTileGrid(Toy_VM* vm, Toy_FunctionNative* self) {
 
 	//TODO: add 'array.flatten()' or something to standard library
 	if (array->count != gridWidth*gridHeight) {
-		fprintf(stderr, TOY_CC_WARN "WARN: Array 'initial' found in 'initTileGrid' has the wrong number of elements; Expecte a 1d array of %u elements, found %u elements instead. This argument will be ignored." TOY_CC_RESET "\n", gridWidth*gridHeight, array->count);
+		char buffer[256];
+		sprintf(buffer, "Array 'initial' found in 'initTileGrid' has the wrong number of elements; Expecte a 1d array of %u elements, found %u elements instead", gridWidth*gridHeight, array->count);
+		Toy_error(buffer);
 		Toy_freeValue(width);
 		Toy_freeValue(height);
 		Toy_freeValue(initial);
@@ -62,7 +70,9 @@ void api_initTileGrid(Toy_VM* vm, Toy_FunctionNative* self) {
 
 	for (unsigned int i = 0; i < gridWidth*gridHeight; i++) {
 		if (!TOY_VALUE_IS_INTEGER(array->data[i]) || TOY_VALUE_AS_INTEGER(array->data[i]) < 0) {
-			fprintf(stderr, TOY_CC_WARN "WARN: An element at index %u in the array 'initial' found in 'initTileGrid' is not an integer greater than or equal to '0'. This tile will not be set." TOY_CC_RESET "\n", i);
+			char buffer[256];
+			sprintf(buffer, "An element at index %u in the array 'initial' found in 'initTileGrid' is not an integer greater than or equal to '0' (tile ignored)", i);
+			Toy_error(buffer);
 			continue;
 		}
 
@@ -81,7 +91,9 @@ static void attr_tileGridSetTile(Toy_VM* vm, Toy_FunctionNative* self) {
 
 	//check for initialization
 	if (gridContents == NULL) {
-		fprintf(stderr, TOY_CC_ERROR "ERROR: TileGrid not initialized" TOY_CC_RESET "\n");
+		char buffer[256];
+		sprintf(buffer, "'TileGrid' not initialized");
+		Toy_error(buffer);
 		return;
 	}
 
@@ -121,7 +133,9 @@ static void attr_tileGridGetTile(Toy_VM* vm, Toy_FunctionNative* self) {
 
 	//check for initialization
 	if (gridContents == NULL) {
-		fprintf(stderr, TOY_CC_ERROR "ERROR: TileGrid not initialized" TOY_CC_RESET "\n");
+		char buffer[256];
+		sprintf(buffer, "'TileGrid' not initialized");
+		Toy_error(buffer);
 		return;
 	}
 
@@ -158,6 +172,14 @@ static void attr_tileGridGetTile(Toy_VM* vm, Toy_FunctionNative* self) {
 
 Toy_Value handleTileGridAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attribute) {
 	(void)compound; //this doesn't care about the object, as there's only one grid
+
+	//check for initialization
+	if (gridContents == NULL) {
+		char buffer[256];
+		sprintf(buffer, "'TileGrid' not initialized");
+		Toy_error(buffer);
+		return TOY_VALUE_FROM_NULL();
+	}
 
 	Toy_String* string = TOY_VALUE_AS_STRING(attribute);
 	const char* cstr = string->leaf.data;

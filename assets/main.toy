@@ -62,17 +62,17 @@ fn playerOnFrame(player: Opaque) {
 
 //when the game is ready, load the "zombie" sprite
 fn onReady() {
-	LoadSprite("zombie", "assets/parvati.png", 32, 32);
+	var zombieSprite = LoadSprite("assets/parvati.png", 32, 32);
 
 	//spawn some "zombies" looking for brains
-	SpawnActorAt("zombie", wander, 250, 250);
-	SpawnActorAt("zombie", wander, 250, 500);
-	SpawnActorAt("zombie", wander, 500, 250);
-	SpawnActorAt("zombie", wander, 500, 500);
+	SpawnActorAt(250, 250, zombieSprite, wander);
+	SpawnActorAt(250, 500, zombieSprite, wander);
+	SpawnActorAt(500, 250, zombieSprite, wander);
+	SpawnActorAt(500, 500, zombieSprite, wander);
 
 	//spawn the player
-	LoadSprite("player", "assets/parvati.png", 32, 32);
-	playerRef = SpawnActorAt("player", playerOnFrame, 300, 300);
+	var playerSprite = LoadSprite("assets/parvati.png", 32, 32);
+	playerRef = SpawnActorAt(300, 300, playerSprite, playerOnFrame);
 }
 
 fn onFrame() {
