@@ -297,7 +297,7 @@ void initGameAPI(Toy_VM* vm) {
 		Toy_freeString(key);
 	}
 
-	DECLARE_OPAQUE("Keybaord", &keyboardData, vm->scope, &vm->memoryBucket);
+	DECLARE_OPAQUE("Keyboard", &keyboardData, vm->scope, &vm->memoryBucket);
 	DECLARE_OPAQUE("KeyPressed", &keyPressedData, vm->scope, &vm->memoryBucket);
 	DECLARE_OPAQUE("KeyReleased", &keyReleasedData, vm->scope, &vm->memoryBucket);
 

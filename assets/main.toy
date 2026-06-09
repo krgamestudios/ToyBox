@@ -55,6 +55,10 @@ fn playerOnFrame(player: Opaque) {
 		mod = 0.707;
 	}
 
+	if (Keyboard.SPACE) { //checking a typo
+		mod *= 3;
+	}
+
 	//move the player
 	player.setX(player.x + floor(playerMotionX * mod));
 	player.setY(player.y + floor(playerMotionY * mod));
