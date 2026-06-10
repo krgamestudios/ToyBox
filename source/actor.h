@@ -6,12 +6,7 @@
 #include "toy_function.h"
 #include "raylib.h"
 
-//TODO: incomplete
-// var playerSprite = LoadSprite("assets/parvati.png", 32, 32);
-// playerSprite.AddAnimationState("idle-south", 0, 1); //offset 0, 1 frame
-// etc.
-//
-// var playerActor = SpawnActorAt(250, 300, playerSprite, playerCallback);
+//WARN: Sprites and Actors are tightly coupled, but that's good enough for the moment
 
 //sprites loaded from disk, with zero or more states
 typedef struct SpriteData {
@@ -23,7 +18,7 @@ typedef struct SpriteData {
 
 //assumes each state is a single row on the sprite sheet
 typedef struct SpriteState {
-	unsigned int offset;
+	unsigned int stripIndex;
 	unsigned int frameCount;
 } SpriteState;
 
@@ -49,4 +44,5 @@ void processActors(Toy_VM* vm);
 void drawActors(Toy_VM* vm);
 
 //opaque binding
+Toy_Value handleSpriteAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attribute);
 Toy_Value handleActorAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attribute);

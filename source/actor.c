@@ -9,6 +9,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+//util macro
+#define CSTR_MATCH(FIRST, SECOND) (strlen(FIRST) == strlen(SECOND) && strcmp(FIRST, SECOND) == 0)
+
 //static storage
 static Toy_Table* spriteTable = NULL;
 static Toy_Array* actorArray = NULL;
@@ -20,7 +23,7 @@ static void api_loadSprite(Toy_VM* vm, Toy_FunctionNative* self) {
 
 	if (!IsWindowReady()) {
 		char buffer[256];
-		sprintf(buffer, "Can't load actor sprites before the window has been initialized");
+		snprintf(buffer, 256, "Can't load actor sprites before the window has been initialized");
 		Toy_error(buffer);
 		return;
 	}
@@ -28,7 +31,7 @@ static void api_loadSprite(Toy_VM* vm, Toy_FunctionNative* self) {
 	//check for initialization
 	if (spriteTable == NULL || actorArray == NULL) {
 		char buffer[256];
-		sprintf(buffer, "Object pool for actor system hasn't been initialized before the call to 'loadSprite'");
+		snprintf(buffer, 256, "Object pool for actor system hasn't been initialized before the call to 'loadSprite'");
 		Toy_error(buffer);
 		return;
 	}
@@ -36,7 +39,7 @@ static void api_loadSprite(Toy_VM* vm, Toy_FunctionNative* self) {
 	//check parameter count
 	if (vm->stack->count < 3) {
 		char buffer[256];
-		sprintf(buffer, "Not enough parameters found in 'loadSprite'");
+		snprintf(buffer, 256, "Not enough parameters found in 'loadSprite'");
 		Toy_error(buffer);
 		return;
 	}
@@ -48,8 +51,11 @@ static void api_loadSprite(Toy_VM* vm, Toy_FunctionNative* self) {
 	//check types
 	if (!TOY_VALUE_IS_STRING(file) || !TOY_VALUE_IS_INTEGER(width) || !TOY_VALUE_IS_INTEGER(height)) {
 		char buffer[256];
-		sprintf(buffer, "Bad parameter types found in 'loadSprite'");
+		snprintf(buffer, 256, "Bad parameter types found in 'loadSprite'");
 		Toy_error(buffer);
+		Toy_freeValue(file);
+		Toy_freeValue(width);
+		Toy_freeValue(height);
 		return;
 	}
 
@@ -97,7 +103,7 @@ static void api_spawnActorAt(Toy_VM* vm, Toy_FunctionNative* self) {
 	//check for initialization
 	if (spriteTable == NULL || actorArray == NULL) {
 		char buffer[256];
-		sprintf(buffer, "Object pool for actor system hasn't been initialized before the call to 'spawnActorAt'");
+		snprintf(buffer, 256, "Object pool for actor system hasn't been initialized before the call to 'spawnActorAt'");
 		Toy_error(buffer);
 		return;
 	}
@@ -105,7 +111,7 @@ static void api_spawnActorAt(Toy_VM* vm, Toy_FunctionNative* self) {
 	//check parameter count
 	if (vm->stack->count < 4) {
 		char buffer[256];
-		sprintf(buffer, "Not enough parameters found in 'spawnActorAt'");
+		snprintf(buffer, 256, "Not enough parameters found in 'spawnActorAt'");
 		Toy_error(buffer);
 		return;
 	}
@@ -126,24 +132,24 @@ static void api_spawnActorAt(Toy_VM* vm, Toy_FunctionNative* self) {
 	//check types
 	if (!TOY_VALUE_IS_FLOAT(xpos) || !TOY_VALUE_IS_FLOAT(ypos) || !TOY_VALUE_IS_OPAQUE(sprite) || !(TOY_VALUE_IS_FUNCTION(step) || TOY_VALUE_IS_NULL(step))) {
 		char buffer[256];
-		sprintf(buffer, "Bad parameter types found in 'spawnActorAt'");
+		snprintf(buffer, 256, "Bad parameter types found in 'spawnActorAt'");
 		Toy_error(buffer);
-		Toy_freeValue(sprite);
-		Toy_freeValue(step);
 		Toy_freeValue(xpos);
 		Toy_freeValue(ypos);
+		Toy_freeValue(sprite);
+		Toy_freeValue(step);
 		return;
 	}
 
 	//check the sprite data
 	if (*(OpaqueType*)TOY_VALUE_AS_OPAQUE(sprite) != OPAQUE_SPRITE_DATA) {
 		char buffer[256];
-		sprintf(buffer, "Bad parameter types found in 'spawnActorAt' (expected opaque 'SpriteData')");
+		snprintf(buffer, 256, "Bad parameter types found in 'spawnActorAt' (expected opaque 'SpriteData')");
 		Toy_error(buffer);
-		Toy_freeValue(sprite);
-		Toy_freeValue(step);
 		Toy_freeValue(xpos);
 		Toy_freeValue(ypos);
+		Toy_freeValue(sprite);
+		Toy_freeValue(step);
 		return;
 	}
 
@@ -192,7 +198,7 @@ static void api_spawnActorAt(Toy_VM* vm, Toy_FunctionNative* self) {
 	(*newActorPtr) = (ActorData){
 		.type = OPAQUE_ACTOR_DATA,
 		.spriteData = (SpriteData*)(TOY_VALUE_AS_OPAQUE(sprite)),
-		.spriteState = NULL, //TODO: incomplete
+		.spriteState = NULL,
 		.currentFrame = 0,
 		.position = { TOY_VALUE_AS_FLOAT(xpos), TOY_VALUE_AS_FLOAT(ypos) },
 		.onStep = onStep,
@@ -215,11 +221,10 @@ typedef struct CallbackPairs {
 	Toy_nativeCallback callback;
 } CallbackPairs;
 
+//WARN: No "unload" is currently implemented
 static CallbackPairs callbackPairs[] = {
 	{"LoadSprite", api_loadSprite},
-	// {"unloadSprite", unloadSprite},
 	{"SpawnActorAt", api_spawnActorAt},
-	// {"despawnActor", despawnActor},
 
 	{NULL, NULL},
 };
@@ -281,7 +286,7 @@ void processActors(Toy_VM* vm) {
 	//check for initialization
 	if (spriteTable == NULL || actorArray == NULL) {
 		char buffer[256];
-		sprintf(buffer, "Object pool for actor system hasn't been initialized before the call to 'processActors'");
+		snprintf(buffer, 256, "Object pool for actor system hasn't been initialized before the call to 'processActors'");
 		Toy_error(buffer);
 		return;
 	}
@@ -331,7 +336,7 @@ void drawActors(Toy_VM* vm) {
 	//check for initialization
 	if (spriteTable == NULL || actorArray == NULL) {
 		char buffer[256];
-		sprintf(buffer, "Object pool for actor system hasn't been initialized before the call to 'drawActors'");
+		snprintf(buffer, 256, "Object pool for actor system hasn't been initialized before the call to 'drawActors'");
 		Toy_error(buffer);
 		return;
 	}
@@ -340,19 +345,107 @@ void drawActors(Toy_VM* vm) {
 		ActorData* actor = (ActorData*)TOY_VALUE_AS_OPAQUE(actorArray->data[i]);
 
 		if (actor->enabled) {
-			DrawTextureRec(actor->spriteData->texture, actor->spriteData->rect, actor->position, WHITE);
+			if (actor->spriteState == NULL) {
+				//Texture2D texture, Rectangle source, Vector2 position, Color tint
+				DrawTextureRec(actor->spriteData->texture, actor->spriteData->rect, actor->position, WHITE);
+			}
 
-			//TODO: incomplete
-			// DrawTexturePro(
-			// 	actor->spriteData->texture, actor->spriteData->rect,
-			// 	(Rectangle){actor->position.x, actor->position.y, 128, 128},
-			// 	(Vector2){0,0}, 0, WHITE
-			// );
+			else {
+				//Texture2D texture, Rectangle source, Rectangle dest, Vector2 origin, float rotation, Color tint
+				DrawTexturePro(
+					actor->spriteData->texture,
+					(Rectangle){
+						actor->spriteData->rect.x + actor->currentFrame * actor->spriteData->rect.width,
+						actor->spriteData->rect.y + actor->spriteState->stripIndex * actor->spriteData->rect.height,
+						actor->spriteData->rect.width,
+						actor->spriteData->rect.height,
+					},
+					(Rectangle){actor->position.x, actor->position.y, actor->spriteData->rect.width, actor->spriteData->rect.height},
+					(Vector2){0,0},
+					0,
+					WHITE
+				);
+
+				//increment the currentFrame
+				actor->currentFrame = (actor->currentFrame + 1) % actor->spriteState->frameCount;
+			}
 		}
 	}
 }
 
-//opaque attributes
+//opaque attributes for sprites
+static void attr_spriteAddAnimationState(Toy_VM* vm, Toy_FunctionNative* self) {
+	//sprite, anim-key, strip index, frame count
+	(void)self;
+
+	//remember, nothing is freed from a "method"
+	Toy_Value compound = Toy_popStack(&vm->stack);
+	Toy_Value frameCount = Toy_popStack(&vm->stack);
+	Toy_Value stripIndex = Toy_popStack(&vm->stack);
+	Toy_Value key = Toy_popStack(&vm->stack);
+
+	if (!TOY_VALUE_IS_STRING(key) || !TOY_VALUE_IS_INTEGER(stripIndex) || !TOY_VALUE_IS_INTEGER(frameCount)) {
+		char buffer[256];
+		snprintf(buffer, 256, "Bad parameter types in SpriteData.addAnimationState()");
+		Toy_error(buffer);
+		return;
+	}
+
+	//get the sprite object, with a valid state table
+	SpriteData* sprite = (SpriteData*)TOY_VALUE_AS_OPAQUE(compound);
+	if (sprite->states == NULL) {
+		sprite->states = Toy_allocateTable(TOY_TABLE_INITIAL_CAPACITY);
+	}
+
+	//check for existing state names
+	if (Toy_private_lookupTableEntryPtr(&sprite->states, key) != NULL) {
+		char buffer[256];
+		snprintf(buffer, 256, "Can't overwrite an existing sprite animation state in SpriteData.addAnimationState()");
+		Toy_error(buffer);
+		return;
+	}
+
+	//make the new state object
+	SpriteState* state = (SpriteState*)Toy_partitionBucket(&vm->memoryBucket, sizeof(SpriteState)); //TODO: free this partition
+
+	state->stripIndex = TOY_VALUE_AS_INTEGER(stripIndex);
+	state->frameCount = TOY_VALUE_AS_INTEGER(frameCount);
+
+	//insert the new state
+	Toy_insertTable(&sprite->states, key, TOY_OPAQUE_FROM_POINTER(state));
+}
+
+Toy_Value handleSpriteAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attribute) {
+	(void)compound;
+
+	//check for initialization
+	if (spriteTable == NULL) {
+		char buffer[256];
+		snprintf(buffer, 256, "Object pool for sprite system hasn't been initialized before the call to 'handleSpriteAttributes'");
+		Toy_error(buffer);
+		return TOY_VALUE_FROM_NULL();
+	}
+
+	//useable actor
+	// SpriteData* sprite = (SpriteData*)TOY_VALUE_AS_OPAQUE(compound);
+
+	//the attribute we're looking for
+	Toy_String* string = TOY_VALUE_AS_STRING(attribute);
+	const char* cstr = string->leaf.data;
+
+	if (CSTR_MATCH(cstr, "addAnimationState")) {
+		Toy_Function* fn = Toy_createFunctionFromCallback(&vm->memoryBucket, attr_spriteAddAnimationState);
+		return TOY_VALUE_FROM_FUNCTION(fn);
+	}
+	else {
+		char buffer[256];
+		snprintf(buffer, 256, "Unknown attribute '%s' of 'SpriteData' requested in 'handleSpriteAttributes'", TOY_VALUE_AS_STRING(attribute)->leaf.data);
+		Toy_error(buffer);
+		return TOY_VALUE_FROM_NULL();
+	}
+}
+
+//opaque attributes for actor
 static void attr_actorSetX(Toy_VM* vm, Toy_FunctionNative* self) {
 	(void)self;
 
@@ -366,7 +459,7 @@ static void attr_actorSetX(Toy_VM* vm, Toy_FunctionNative* self) {
 
 	if (!TOY_VALUE_IS_FLOAT(x)) {
 		char buffer[256];
-		sprintf(buffer, "Bad argument type in ActorData.setX() (expected 'Int' or 'Float', found '%s')", Toy_getValueTypeAsCString(x.type));
+		snprintf(buffer, 256, "Bad argument type in ActorData.setX() (expected 'Int' or 'Float', found '%s')", Toy_getValueTypeAsCString(x.type));
 		Toy_error(buffer);
 		return;
 	}
@@ -387,7 +480,7 @@ static void attr_actorSetY(Toy_VM* vm, Toy_FunctionNative* self) {
 
 	if (!TOY_VALUE_IS_FLOAT(y)) {
 		char buffer[256];
-		sprintf(buffer, "Bad argument type in ActorData.setY() (expected 'Int' or 'Float', found '%s')", Toy_getValueTypeAsCString(y.type));
+		snprintf(buffer, 256, "Bad argument type in ActorData.setY() (expected 'Int' or 'Float', found '%s')", Toy_getValueTypeAsCString(y.type));
 		Toy_error(buffer);
 		return;
 	}
@@ -396,20 +489,64 @@ static void attr_actorSetY(Toy_VM* vm, Toy_FunctionNative* self) {
 	actor->position.y = TOY_VALUE_AS_FLOAT(y);
 }
 
-static void attr_actorSetSpriteState(Toy_VM* vm, Toy_FunctionNative* self) {
-	(void)vm;
+static void attr_actorSetAnimationState(Toy_VM* vm, Toy_FunctionNative* self) {
 	(void)self;
-	//TODO: incomplete
+
+	Toy_Value compound = Toy_popStack(&vm->stack);
+	Toy_Value key = Toy_popStack(&vm->stack);
+
+	if (!TOY_VALUE_IS_STRING(key)) {
+		char buffer[256];
+		snprintf(buffer, 256, "Bad argument type in ActorData.setSpriteState() (expected 'String', found '%s')", Toy_getValueTypeAsCString(key.type));
+		Toy_error(buffer);
+		return;
+	}
+
+	//get actor, sprite & state table
+	ActorData* actor = (ActorData*)TOY_VALUE_AS_OPAQUE(compound);
+	SpriteData* sprite = actor->spriteData;
+
+	if (sprite->states == NULL) {
+		char buffer[256];
+		snprintf(buffer, 256, "No sprite states found in Actor's 'SpriteData'");
+		Toy_error(buffer);
+		return;
+	}
+
+	//get the state
+	Toy_Value stateValue = Toy_lookupTable(&sprite->states, key);
+
+	if (!TOY_VALUE_IS_OPAQUE(stateValue)) {
+		const char* cstr;
+		if (TOY_VALUE_AS_STRING(key)->info.type != TOY_STRING_LEAF) {
+			cstr = Toy_getStringRaw(TOY_VALUE_AS_STRING(key));
+		}
+		else {
+			cstr = TOY_VALUE_AS_STRING(key)->leaf.data;
+		}
+
+		char buffer[256];
+		snprintf(buffer, 256, "No sprite state named '%s' found in Actor's 'SpriteData'", cstr);
+		Toy_error(buffer);
+
+		if (TOY_VALUE_AS_STRING(key)->info.type != TOY_STRING_LEAF) {
+			free((void*)cstr);
+		}
+		return;
+	}
+
+	//finally, set the state and reset the current frame, but ONLY if the state has actually been changed
+	if (actor->spriteState != (SpriteState*)TOY_VALUE_AS_OPAQUE(stateValue)) {
+		actor->spriteState = (SpriteState*)TOY_VALUE_AS_OPAQUE(stateValue);
+		actor->currentFrame = 0;
+	}
 }
 
-#define CSTR_MATCH(FIRST, SECOND) (strlen(FIRST) == strlen(SECOND) && strcmp(FIRST, SECOND) == 0)
-
 Toy_Value handleActorAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attribute) {
-
 	//check for initialization
 	if (spriteTable == NULL || actorArray == NULL) {
 		char buffer[256];
-		sprintf(buffer, "Object pool for actor system hasn't been initialized before the call to 'handleActorAttributes'");
+		snprintf(buffer, 256, "Object pool for actor system hasn't been initialized before the call to 'handleActorAttributes'");
 		Toy_error(buffer);
 		return TOY_VALUE_FROM_NULL();
 	}
@@ -435,8 +572,8 @@ Toy_Value handleActorAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attrib
 		Toy_Function* fn = Toy_createFunctionFromCallback(&vm->memoryBucket, attr_actorSetY);
 		return TOY_VALUE_FROM_FUNCTION(fn);
 	}
-	else if (CSTR_MATCH(cstr, "setSpriteState")) {
-		Toy_Function* fn = Toy_createFunctionFromCallback(&vm->memoryBucket, attr_actorSetSpriteState);
+	else if (CSTR_MATCH(cstr, "setAnimationState")) {
+		Toy_Function* fn = Toy_createFunctionFromCallback(&vm->memoryBucket, attr_actorSetAnimationState);
 		return TOY_VALUE_FROM_FUNCTION(fn);
 	}
 

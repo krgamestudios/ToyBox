@@ -247,18 +247,19 @@ Toy_Value dispatchOpaqueAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value att
 		case OPAQUE_MOUSE_RELEASED:
 			return handleMouseAttributes(vm, compound, attribute);
 
+		case OPAQUE_SPRITE_DATA:
+			return handleSpriteAttributes(vm, compound, attribute);
+
 		case OPAQUE_ACTOR_DATA:
 			return handleActorAttributes(vm, compound, attribute);
 
-		//TODO: sprite data
-
 		case OPAQUE_TILE_GRID:
 			return handleTileGridAttributes(vm, compound, attribute);
-
-		default:
-			fprintf(stderr, TOY_CC_ERROR "ERROR: Bad opaque type found in 'handleOpaqueAttributes'" TOY_CC_RESET "\n");
-			return TOY_VALUE_FROM_NULL(); //do not free the params here
 	}
+
+	//only reached on error
+	fprintf(stderr, TOY_CC_ERROR "ERROR: Bad opaque type found in 'handleOpaqueAttributes'" TOY_CC_RESET "\n");
+	return TOY_VALUE_FROM_NULL(); //do not free the params here
 }
 
 //API tools
