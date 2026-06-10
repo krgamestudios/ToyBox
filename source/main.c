@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+//utils
 static int errorAndContinueCallback(const char* msg) {
 	return fprintf(stderr, TOY_CC_ERROR "Error: %s" TOY_CC_RESET "\n", msg);
 }
@@ -28,7 +29,6 @@ static int assertFailureAndExitCallback(const char* msg) {
 	exit(-1);
 }
 
-//utils
 unsigned char* readFile(const char* path, int* size) {
 	//open the file
 	FILE* file = fopen(path, "rb");
@@ -88,11 +88,12 @@ typedef struct Settings {
 	bool version; //TODO: version info missing
 	const char* script;
 	bool verbose; //TODO: verbose info missing
+	bool uncappedFPS;
 } Settings;
 
 void usageInfo(int argc, const char* argv[]) {
 	(void)argc;
-	printf("Usage: %s [ -h | -f script.toy ]\n\n", argv[0]);
+	printf("Usage: %s [-c] [ -h | -f script.toy ]\n\n", argv[0]);
 }
 
 void helpInfo(int argc, const char* argv[]) {
@@ -104,6 +105,7 @@ void helpInfo(int argc, const char* argv[]) {
 	// printf("  -v, --version\t\t\tShow version and copyright information then exit.\n");
 	printf("  -f, --file script\t\tStart the game with the given script.\n");
 	// printf("  -d, --verbose\t\tPrint debugging information about Toy's internals.\n");
+	printf("  -c, --no-fps-cap\t\tRemove the 60 FPS cap.\n");
 
 	printf("\n");
 }
@@ -140,6 +142,10 @@ Settings parseSettings(int argc, const char* argv[]) {
 			settings.verbose = true;
 		}
 
+		else if (!strcmp(argv[i], "-c") || !strcmp(argv[i], "--no-fps-cap")) {
+			settings.uncappedFPS = true;
+		}
+
 		else {
 			settings.error = true;
 		}
@@ -152,6 +158,7 @@ Settings parseSettings(int argc, const char* argv[]) {
 static Toy_Function* onReady = NULL;
 static Toy_Function* onFrame = NULL;
 static Toy_Function* onClose = NULL;
+static bool uncappedFPS = false;
 
 //game API definitions
 void api_initScreen(Toy_VM* vm, Toy_FunctionNative* self) {
@@ -168,7 +175,9 @@ void api_initScreen(Toy_VM* vm, Toy_FunctionNative* self) {
 
 	//setup raylib
 	InitWindow(TOY_VALUE_AS_INTEGER(width), TOY_VALUE_AS_INTEGER(height), TOY_VALUE_AS_STRING(caption)->leaf.data);
-	SetTargetFPS(60);
+	if (!uncappedFPS) {
+		SetTargetFPS(60);
+	}
 
 	if (!IsWindowReady()) {
 		fprintf(stderr, TOY_CC_ERROR "ERROR: raylib failed to init the window, exiting" TOY_CC_RESET "\n");
@@ -329,6 +338,7 @@ int main(int argc, const char* argv[]) {
 		helpInfo(argc, argv);
 		return 0;
 	}
+	uncappedFPS = settings.uncappedFPS;
 
 	//load the entry point
 	int size = 0;
