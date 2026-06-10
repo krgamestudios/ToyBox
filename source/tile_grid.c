@@ -170,6 +170,8 @@ static void attr_tileGridGetTile(Toy_VM* vm, Toy_FunctionNative* self) {
 	Toy_freeValue(y);
 }
 
+#define CSTR_MATCH(FIRST, SECOND) (strlen(FIRST) == strlen(SECOND) && strcmp(FIRST, SECOND) == 0)
+
 Toy_Value handleTileGridAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attribute) {
 	(void)compound; //this doesn't care about the object, as there's only one grid
 
@@ -187,19 +189,19 @@ Toy_Value handleTileGridAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value att
 	//NOTE: this probably could use a loop too, but its short enough that IDC.
 
 	//find the correct operation
-	if (strlen(cstr) == 5 && strncmp(cstr, "width", strlen(cstr)) == 0) {
+	if (CSTR_MATCH(cstr, "width")) {
 		return TOY_VALUE_FROM_INTEGER(gridWidth);
 	}
-	else if (strlen(cstr) == 6 && strncmp(cstr, "height", strlen(cstr)) == 0) {
+	else if (CSTR_MATCH(cstr, "height")) {
 		return TOY_VALUE_FROM_INTEGER(gridHeight);
 	}
 
-	else if (strlen(cstr) == 7 && strncmp(cstr, "setTile", strlen(cstr)) == 0) {
+	else if (CSTR_MATCH(cstr, "setTile")) {
 		Toy_Function* fn = Toy_createFunctionFromCallback(&vm->memoryBucket, attr_tileGridSetTile);
 		return TOY_VALUE_FROM_FUNCTION(fn);
 	}
 
-	else if (strlen(cstr) == 7 && strncmp(cstr, "getTile", strlen(cstr)) == 0) {
+	else if (CSTR_MATCH(cstr, "getTile")) {
 		Toy_Function* fn = Toy_createFunctionFromCallback(&vm->memoryBucket, attr_tileGridGetTile);
 		return TOY_VALUE_FROM_FUNCTION(fn);
 	}

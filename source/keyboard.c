@@ -138,6 +138,8 @@ KeyboardData keyReleasedData = {
 	.callback = &IsKeyReleased,
 };
 
+#define CSTR_MATCH(FIRST, SECOND) (strlen(FIRST) == strlen(SECOND) && strcmp(FIRST, SECOND) == 0)
+
 Toy_Value handleKeyboardAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attribute) {
 	(void)vm;
 
@@ -148,7 +150,7 @@ Toy_Value handleKeyboardAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value att
 
 	//find the mapped value, if available
 	for (KeyboardMap* ptr = keyboardMap; ptr->cstr != NULL; ptr++) {
-		if (strlen(ptr->cstr) == strlen(cstr) && strncmp(cstr, ptr->cstr, strlen(ptr->cstr)) == 0) {
+		if (CSTR_MATCH(ptr->cstr, cstr)) {
 			bool result = kd->callback(ptr->raykey);
 			return TOY_VALUE_FROM_BOOLEAN(result);
 		}
