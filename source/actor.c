@@ -255,9 +255,20 @@ void freeActorAPI(Toy_VM* vm) {
 	(void)vm;
 
 	//free the GL textures
-	for (unsigned int i = 0; i < spriteTable->capacity; i++) {
-		if (TOY_VALUE_IS_OPAQUE(spriteTable->data[i].value)) {
+	for (unsigned int i = 0; spriteTable != NULL && i < spriteTable->capacity; i++) {
+		if (!TOY_VALUE_IS_NULL(spriteTable->data[i].key) && TOY_VALUE_IS_OPAQUE(spriteTable->data[i].value)) {
 			UnloadTexture(((SpriteData*)TOY_VALUE_AS_OPAQUE(spriteTable->data[i].value))->texture);
+
+			//clear the sprites' states, if any
+			Toy_Table* statesTable = ((SpriteData*)TOY_VALUE_AS_OPAQUE(spriteTable->data[i].value))->states;
+			for (unsigned int j = 0; statesTable != NULL && j < statesTable->capacity; j++) {
+				if (!TOY_VALUE_IS_NULL(statesTable->data[j].key) && TOY_VALUE_IS_OPAQUE(statesTable->data[j].value)) {
+					SpriteState* state = (SpriteState*)TOY_VALUE_AS_OPAQUE(statesTable->data[j].value);
+					Toy_releaseBucketPartition((unsigned char*)state); //this was partitioned in 'attr_spriteAddAnimationState'
+				}
+			}
+
+			Toy_freeTable(statesTable);
 		}
 	}
 
@@ -406,7 +417,7 @@ static void attr_spriteAddAnimationState(Toy_VM* vm, Toy_FunctionNative* self) {
 	}
 
 	//make the new state object
-	SpriteState* state = (SpriteState*)Toy_partitionBucket(&vm->memoryBucket, sizeof(SpriteState)); //TODO: free this partition
+	SpriteState* state = (SpriteState*)Toy_partitionBucket(&vm->memoryBucket, sizeof(SpriteState));
 
 	state->stripIndex = TOY_VALUE_AS_INTEGER(stripIndex);
 	state->frameCount = TOY_VALUE_AS_INTEGER(frameCount);
@@ -466,6 +477,9 @@ static void attr_actorSetX(Toy_VM* vm, Toy_FunctionNative* self) {
 
 	ActorData* actor = (ActorData*)TOY_VALUE_AS_OPAQUE(compound);
 	actor->position.x = TOY_VALUE_AS_FLOAT(x);
+
+	Toy_freeValue(compound);
+	Toy_freeValue(x);
 }
 
 static void attr_actorSetY(Toy_VM* vm, Toy_FunctionNative* self) {
@@ -487,6 +501,9 @@ static void attr_actorSetY(Toy_VM* vm, Toy_FunctionNative* self) {
 
 	ActorData* actor = (ActorData*)TOY_VALUE_AS_OPAQUE(compound);
 	actor->position.y = TOY_VALUE_AS_FLOAT(y);
+
+	Toy_freeValue(compound);
+	Toy_freeValue(y);
 }
 
 static void attr_actorSetAnimationState(Toy_VM* vm, Toy_FunctionNative* self) {
@@ -499,6 +516,8 @@ static void attr_actorSetAnimationState(Toy_VM* vm, Toy_FunctionNative* self) {
 		char buffer[256];
 		snprintf(buffer, 256, "Bad argument type in ActorData.setSpriteState() (expected 'String', found '%s')", Toy_getValueTypeAsCString(key.type));
 		Toy_error(buffer);
+		Toy_freeValue(compound);
+		Toy_freeValue(key);
 		return;
 	}
 
@@ -510,6 +529,8 @@ static void attr_actorSetAnimationState(Toy_VM* vm, Toy_FunctionNative* self) {
 		char buffer[256];
 		snprintf(buffer, 256, "No sprite states found in Actor's 'SpriteData'");
 		Toy_error(buffer);
+		Toy_freeValue(compound);
+		Toy_freeValue(key);
 		return;
 	}
 
@@ -532,6 +553,8 @@ static void attr_actorSetAnimationState(Toy_VM* vm, Toy_FunctionNative* self) {
 		if (TOY_VALUE_AS_STRING(key)->info.type != TOY_STRING_LEAF) {
 			free((void*)cstr);
 		}
+		Toy_freeValue(compound);
+		Toy_freeValue(key);
 		return;
 	}
 
@@ -540,6 +563,9 @@ static void attr_actorSetAnimationState(Toy_VM* vm, Toy_FunctionNative* self) {
 		actor->spriteState = (SpriteState*)TOY_VALUE_AS_OPAQUE(stateValue);
 		actor->currentFrame = 0;
 	}
+
+	Toy_freeValue(compound);
+	Toy_freeValue(key);
 }
 
 Toy_Value handleActorAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attribute) {
