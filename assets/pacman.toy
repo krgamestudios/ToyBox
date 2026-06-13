@@ -2,30 +2,22 @@
 
 //NOTE: https://shaunlebron.github.io/pacman-mazegen/
 
+//var grid: Opaque = CreateTileGrid(3, 3, [1, 2, 3, 4, 5, 6, 7, 8, 9]); //this also works, but change the coords below
+var grid: Opaque = CreateTileGrid(32, 48, null);
+
 
 fn onReady() {
-	print TileGrid.width;
-	print TileGrid.height;
+	print grid;
+	print grid.width;
+	print grid.height;
 
-	print TileGrid.getTile(10, 10);
+	print grid.getTile(10, 10);
 
-	TileGrid.setTile(10, 10, 42);
+	grid.setTile(10, 10, 42);
 
-	print TileGrid.getTile(10, 10);
+	print grid.getTile(10, 10);
 }
 
 
 InitScreen(1280, 720, "Holy Puck!");
 InitLoop(onReady, null, null);
-InitTileGrid(32, 48, null);
-
-
-
-
-
-//This also works with an 'initial' array
-
-//InitScreen(1280, 720, "No pucks given!");
-//InitLoop(null, null, null);
-//InitTileGrid(3, 3, [1, 2, 3, 4, 5, 6, 7, 8, 9]);
-//print TileGrid.getTile(1, 1);

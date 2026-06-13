@@ -221,7 +221,7 @@ typedef struct CallbackPairs {
 	Toy_nativeCallback callback;
 } CallbackPairs;
 
-//WARN: No "unload" is currently implemented
+//URGENT: No "unload" is currently implemented
 static CallbackPairs callbackPairs[] = {
 	{"LoadSprite", api_loadSprite},
 	{"SpawnActorAt", api_spawnActorAt},

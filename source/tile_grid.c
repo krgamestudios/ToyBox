@@ -5,16 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-TileGridData tileGridData = {
-	.type = OPAQUE_TILE_GRID,
-};
-
-//static members
-unsigned int gridWidth = 0;
-unsigned int gridHeight = 0;
-unsigned int *gridContents = NULL;
-
-void api_initTileGrid(Toy_VM* vm, Toy_FunctionNative* self) {
+void api_createTileGrid(Toy_VM* vm, Toy_FunctionNative* self) {
 	(void)self;
 
 	Toy_Value initial = Toy_popStack(&vm->stack);
@@ -23,61 +14,76 @@ void api_initTileGrid(Toy_VM* vm, Toy_FunctionNative* self) {
 
 	if (!TOY_VALUE_IS_INTEGER(width) || !TOY_VALUE_IS_INTEGER(height)) {
 		char buffer[256];
-		sprintf(buffer, "Bad argument types found in 'initTileGrid' (width & height)");
+		sprintf(buffer, "Bad argument types found in 'createTileGrid' (width & height)");
 		Toy_error(buffer);
+		Toy_pushStack(&vm->stack, TOY_VALUE_FROM_NULL());
 		return;
 	}
 
 	if (!TOY_VALUE_IS_ARRAY(initial) && !TOY_VALUE_IS_NULL(initial)) {
 		char buffer[256];
-		sprintf(buffer, "Bad argument types found in 'initTileGrid' (initial array)");
+		sprintf(buffer, "Bad argument types found in 'createTileGrid' (initial array)");
 		Toy_error(buffer);
+		Toy_pushStack(&vm->stack, TOY_VALUE_FROM_NULL());
 		return;
 	}
 
 	if (TOY_VALUE_AS_INTEGER(width) <= 0 || TOY_VALUE_AS_INTEGER(height) <= 0) {
 		char buffer[256];
-		sprintf(buffer, "Bad argument values found in 'initTileGrid' ('width' & 'height' must be greater than '0')");
+		sprintf(buffer, "Bad argument values found in 'createTileGrid' ('width' & 'height' must be greater than '0')");
 		Toy_error(buffer);
+		Toy_pushStack(&vm->stack, TOY_VALUE_FROM_NULL());
 		return;
 	}
 
-	gridWidth = TOY_VALUE_AS_INTEGER(width);
-	gridHeight = TOY_VALUE_AS_INTEGER(height);
+	//make the grid object
+	TileGridData *tileGridData = (TileGridData*)Toy_partitionBucket(&vm->memoryBucket, sizeof(TileGridData));
+	(*tileGridData) = (TileGridData){
+		.type = OPAQUE_TILE_GRID,
+		.width = TOY_VALUE_AS_INTEGER(width),
+		.height = TOY_VALUE_AS_INTEGER(height),
+		.cells = NULL,
+	};
 
-	gridContents = malloc(gridWidth * gridHeight * sizeof(unsigned int));
-	memset(gridContents, 0, gridWidth * gridHeight * sizeof(unsigned int));
+	tileGridData->cells = malloc(tileGridData->width * tileGridData->height * sizeof(unsigned int));
+	memset(tileGridData->cells, 0, tileGridData->width * tileGridData->height * sizeof(unsigned int));
 
+	//if not initialized, clean up and return
 	if (TOY_VALUE_IS_NULL(initial)) {
+		Toy_pushStack(&vm->stack, TOY_OPAQUE_FROM_POINTER(tileGridData));
 		Toy_freeValue(width);
 		Toy_freeValue(height);
 		Toy_freeValue(initial);
 		return;
 	}
 
+	//set the internal state
 	Toy_Array* array = TOY_VALUE_AS_ARRAY(initial);
 
-	//TODO: add 'array.flatten()' or something to standard library
-	if (array->count != gridWidth*gridHeight) {
+	if (array->count != tileGridData->width*tileGridData->height) {
 		char buffer[256];
-		sprintf(buffer, "Array 'initial' found in 'initTileGrid' has the wrong number of elements; Expecte a 1d array of %u elements, found %u elements instead", gridWidth*gridHeight, array->count);
+		sprintf(buffer, "Array 'initial' found in 'createTileGrid' has the wrong number of elements; Expecte a 1d array of %u elements, found %u elements instead", tileGridData->width*tileGridData->height, array->count);
 		Toy_error(buffer);
+		Toy_pushStack(&vm->stack, TOY_OPAQUE_FROM_POINTER(tileGridData));
 		Toy_freeValue(width);
 		Toy_freeValue(height);
 		Toy_freeValue(initial);
 		return;
 	}
 
-	for (unsigned int i = 0; i < gridWidth*gridHeight; i++) {
+	for (unsigned int i = 0; i < tileGridData->width*tileGridData->height; i++) {
 		if (!TOY_VALUE_IS_INTEGER(array->data[i]) || TOY_VALUE_AS_INTEGER(array->data[i]) < 0) {
 			char buffer[256];
-			sprintf(buffer, "An element at index %u in the array 'initial' found in 'initTileGrid' is not an integer greater than or equal to '0' (tile ignored)", i);
+			sprintf(buffer, "An element at index %u in the array 'initial' found in 'createTileGrid' is not an integer greater than or equal to '0' (tile ignored)", i);
 			Toy_error(buffer);
 			continue;
 		}
 
-		gridContents[i] = TOY_VALUE_AS_INTEGER(array->data[i]);
+		tileGridData->cells[i] = TOY_VALUE_AS_INTEGER(array->data[i]);
 	}
+
+	//return
+	Toy_pushStack(&vm->stack, TOY_OPAQUE_FROM_POINTER(tileGridData));
 
 	//cleanup
 	Toy_freeValue(width);
@@ -85,41 +91,74 @@ void api_initTileGrid(Toy_VM* vm, Toy_FunctionNative* self) {
 	Toy_freeValue(initial);
 }
 
+//callback utils
+typedef struct CallbackPairs {
+	const char* name;
+	Toy_nativeCallback callback;
+} CallbackPairs;
+
+//URGENT: No "unload" is currently implemented, so grids will leak
+static CallbackPairs callbackPairs[] = {
+	{"CreateTileGrid", api_createTileGrid},
+	{NULL, NULL},
+};
+
+void initTileGridAPI(Toy_VM* vm) {
+	if (vm == NULL || vm->scope == NULL || vm->memoryBucket == NULL) {
+		fprintf(stderr, TOY_CC_ERROR "ERROR: Can't initialize the actor API, exiting\n" TOY_CC_RESET);
+		exit(-1);
+	}
+
+	//declare each callback in the global scope
+	for (int i = 0; callbackPairs[i].name; i++) {
+		Toy_String* key = Toy_createStringLength(&(vm->memoryBucket), callbackPairs[i].name, strlen(callbackPairs[i].name));
+		Toy_Function* fn = Toy_createFunctionFromCallback(&(vm->memoryBucket), callbackPairs[i].callback);
+
+		Toy_declareScope(vm->scope, key, TOY_VALUE_FUNCTION, TOY_VALUE_FROM_FUNCTION(fn), true);
+
+		Toy_freeString(key);
+	}
+}
+
 //opaque attributes
 static void attr_tileGridSetTile(Toy_VM* vm, Toy_FunctionNative* self) {
 	(void)self;
 
-	//check for initialization
-	if (gridContents == NULL) {
-		char buffer[256];
-		sprintf(buffer, "'TileGrid' not initialized");
-		Toy_error(buffer);
-		return;
-	}
-
-	Toy_Value compound = Toy_popStack(&vm->stack); //the grid is always on top here
+	Toy_Value compound = Toy_popStack(&vm->stack);
 	Toy_Value value = Toy_popStack(&vm->stack);
 	Toy_Value y = Toy_popStack(&vm->stack);
 	Toy_Value x = Toy_popStack(&vm->stack);
+
+	TileGridData* tileGridData = (TileGridData*)TOY_VALUE_AS_OPAQUE(compound);
 
 	//types
 	if (!TOY_VALUE_IS_INTEGER(x) || !TOY_VALUE_IS_INTEGER(y) || !TOY_VALUE_IS_INTEGER(value)) {
 		char buffer[256];
 		snprintf(buffer, 256, "Bad types found in 'TileGrid.setTile()'");
 		Toy_error(buffer);
+		Toy_pushStack(&vm->stack, TOY_VALUE_FROM_NULL());
 		return;
 	}
 
 	//value bounds
-	if (TOY_VALUE_AS_INTEGER(x) < 0 || TOY_VALUE_AS_INTEGER(y) < 0 || TOY_VALUE_AS_INTEGER(value) < 0 || (unsigned int)TOY_VALUE_AS_INTEGER(x) >= gridWidth || (unsigned int)TOY_VALUE_AS_INTEGER(y) >= gridHeight) {
+	if (TOY_VALUE_AS_INTEGER(x) < 0 || TOY_VALUE_AS_INTEGER(y) < 0 || (unsigned int)TOY_VALUE_AS_INTEGER(x) >= tileGridData->width || (unsigned int)TOY_VALUE_AS_INTEGER(y) >= tileGridData->height) {
 		char buffer[256];
-		snprintf(buffer, 256, "Bad values found in 'TileGrid.setTile()'");
+		snprintf(buffer, 256, "Tile coordinates (%d, %d) out of bounds in 'TileGrid.setTile()'", TOY_VALUE_AS_INTEGER(x), TOY_VALUE_AS_INTEGER(y));
 		Toy_error(buffer);
+		Toy_pushStack(&vm->stack, TOY_VALUE_FROM_NULL());
 		return;
 	}
 
+	if (!TOY_VALUE_IS_INTEGER(value) || TOY_VALUE_AS_INTEGER(value) < 0) {
+			char buffer[256];
+			sprintf(buffer, "Tile value found in 'TileGrid.setTile()' is not an integer greater than or equal to '0'");
+			Toy_error(buffer);
+			Toy_pushStack(&vm->stack, TOY_VALUE_FROM_NULL());
+			return;
+		}
+
 	//update the grid
-	gridContents[ TOY_VALUE_AS_INTEGER(y) * gridWidth + TOY_VALUE_AS_INTEGER(x) ] = TOY_VALUE_AS_INTEGER(value);
+	tileGridData->cells[ TOY_VALUE_AS_INTEGER(y) * tileGridData->width + TOY_VALUE_AS_INTEGER(x) ] = TOY_VALUE_AS_INTEGER(value);
 
 	//cleanup
 	Toy_freeValue(compound);
@@ -131,36 +170,32 @@ static void attr_tileGridSetTile(Toy_VM* vm, Toy_FunctionNative* self) {
 static void attr_tileGridGetTile(Toy_VM* vm, Toy_FunctionNative* self) {
 	(void)self;
 
-	//check for initialization
-	if (gridContents == NULL) {
-		char buffer[256];
-		sprintf(buffer, "'TileGrid' not initialized");
-		Toy_error(buffer);
-		return;
-	}
-
 	Toy_Value compound = Toy_popStack(&vm->stack); //the grid is always on top here
 	Toy_Value y = Toy_popStack(&vm->stack);
 	Toy_Value x = Toy_popStack(&vm->stack);
+
+	TileGridData* tileGridData = (TileGridData*)TOY_VALUE_AS_OPAQUE(compound);
 
 	//types
 	if (!TOY_VALUE_IS_INTEGER(x) || !TOY_VALUE_IS_INTEGER(y)) {
 		char buffer[256];
 		snprintf(buffer, 256, "Bad types found in 'TileGrid.getTile()'");
 		Toy_error(buffer);
+		Toy_pushStack(&vm->stack, TOY_VALUE_FROM_NULL());
 		return;
 	}
 
 	//value bounds
-	if (TOY_VALUE_AS_INTEGER(x) < 0 || TOY_VALUE_AS_INTEGER(y) < 0 || (unsigned int)TOY_VALUE_AS_INTEGER(x) >= gridWidth || (unsigned int)TOY_VALUE_AS_INTEGER(y) >= gridHeight) {
+	if (TOY_VALUE_AS_INTEGER(x) < 0 || TOY_VALUE_AS_INTEGER(y) < 0 || (unsigned int)TOY_VALUE_AS_INTEGER(x) >= tileGridData->width || (unsigned int)TOY_VALUE_AS_INTEGER(y) >= tileGridData->height) {
 		char buffer[256];
-		snprintf(buffer, 256, "Bad values found in 'TileGrid.getTile()'");
+		snprintf(buffer, 256, "Tile coordinates (%d, %d) out of bounds in 'TileGrid.getTile()'", TOY_VALUE_AS_INTEGER(x), TOY_VALUE_AS_INTEGER(y));
 		Toy_error(buffer);
+		Toy_pushStack(&vm->stack, TOY_VALUE_FROM_NULL());
 		return;
 	}
 
 	//push the value
-	Toy_Value value = TOY_VALUE_FROM_INTEGER( (signed int)gridContents[TOY_VALUE_AS_INTEGER(y) * gridWidth + TOY_VALUE_AS_INTEGER(x)] );
+	Toy_Value value = TOY_VALUE_FROM_INTEGER( (signed int)(tileGridData->cells[TOY_VALUE_AS_INTEGER(y) * tileGridData->width + TOY_VALUE_AS_INTEGER(x)]) );
 	Toy_pushStack(&vm->stack, value);
 
 	//cleanup
@@ -173,16 +208,10 @@ static void attr_tileGridGetTile(Toy_VM* vm, Toy_FunctionNative* self) {
 #define CSTR_MATCH(FIRST, SECOND) (strlen(FIRST) == strlen(SECOND) && strcmp(FIRST, SECOND) == 0)
 
 Toy_Value handleTileGridAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attribute) {
-	(void)compound; //this doesn't care about the object, as there's only one grid
+	//useable grid
+	TileGridData* tileGridData = (TileGridData*)TOY_VALUE_AS_OPAQUE(compound);
 
-	//check for initialization
-	if (gridContents == NULL) {
-		char buffer[256];
-		sprintf(buffer, "'TileGrid' not initialized");
-		Toy_error(buffer);
-		return TOY_VALUE_FROM_NULL();
-	}
-
+	//the attribute we're looking for
 	Toy_String* string = TOY_VALUE_AS_STRING(attribute);
 	const char* cstr = string->leaf.data;
 
@@ -190,10 +219,10 @@ Toy_Value handleTileGridAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value att
 
 	//find the correct operation
 	if (CSTR_MATCH(cstr, "width")) {
-		return TOY_VALUE_FROM_INTEGER(gridWidth);
+		return TOY_VALUE_FROM_INTEGER(tileGridData->width);
 	}
 	else if (CSTR_MATCH(cstr, "height")) {
-		return TOY_VALUE_FROM_INTEGER(gridHeight);
+		return TOY_VALUE_FROM_INTEGER(tileGridData->height);
 	}
 
 	else if (CSTR_MATCH(cstr, "setTile")) {

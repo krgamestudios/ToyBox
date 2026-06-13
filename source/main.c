@@ -280,7 +280,6 @@ typedef struct CallbackPairs {
 static CallbackPairs callbackPairs[] = {
 	{"InitScreen", api_initScreen},
 	{"InitLoop", api_initLoop},
-	{"InitTileGrid", api_initTileGrid},
 	{NULL, NULL},
 };
 
@@ -315,10 +314,9 @@ void initGameAPI(Toy_VM* vm) {
 	DECLARE_OPAQUE("MousePressed", &mousePressedData, vm->scope, &vm->memoryBucket);
 	DECLARE_OPAQUE("MouseReleased", &mouseReleasedData, vm->scope, &vm->memoryBucket);
 
-	DECLARE_OPAQUE("TileGrid", &tileGridData, vm->scope, &vm->memoryBucket);
-
-	//actors
+	//opaque APIs
 	initActorAPI(vm);
+	initTileGridAPI(vm);
 }
 
 //main file
