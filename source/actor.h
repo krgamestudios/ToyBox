@@ -33,7 +33,6 @@ typedef struct ActorData {
 	Vector2 position;
 
 	Toy_Function* onStep;
-	bool enabled;
 } ActorData;
 
 //opaque API

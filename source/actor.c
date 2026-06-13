@@ -168,46 +168,38 @@ static void api_spawnActorAt(Toy_VM* vm, Toy_FunctionNative* self) {
 		}
 	}
 
-	//find an existing spot for the new actor, overwriting a dead one if able
-	ActorData* newActorPtr = NULL;
-	for (unsigned int i = 0; i < actorArray->count; i++) {
-		ActorData* actorData = (ActorData*)TOY_VALUE_AS_OPAQUE(actorArray->data[i]);
-		if (!actorData->enabled) { //if this actor is dead, steal the slot
-			//free the dead actor's internals
-			actorData->spriteData = NULL;
-			actorData->spriteState = NULL;
-			actorData->currentFrame = 0;
-			actorData->position = (Vector2){0,0};
-			if (actorData->onStep != NULL) {
-				Toy_freeFunction(actorData->onStep);
-				actorData->onStep = NULL;
-			}
+	//find an existing spot for the new actor, replacing a null one if able
+	Toy_Value* valuePtr = NULL;
 
-			newActorPtr = actorData;
+	//if an actor has been cleared, steal the slot
+	for (unsigned int i = 0; i < actorArray->count; i++) {
+		if (TOY_VALUE_IS_NULL(actorArray->data[i])) {
+			ActorData* actorData = (ActorData*)Toy_partitionBucket(&(vm->memoryBucket), sizeof(ActorData));
+			actorArray->data[i] = TOY_OPAQUE_FROM_POINTER(actorData);
+			valuePtr = &actorArray->data[i];
 			break;
 		}
 	}
 
-	//if no dead actors were found, make a new slot
-	if (newActorPtr == NULL) {
-		newActorPtr = (ActorData*)Toy_partitionBucket(&(vm->memoryBucket), sizeof(ActorData));
-		actorArray->data[actorArray->count++] = TOY_OPAQUE_FROM_POINTER(newActorPtr);
+	//if no null slots were found, make a new slot
+	if (valuePtr == NULL) {
+		ActorData* actorData = (ActorData*)Toy_partitionBucket(&(vm->memoryBucket), sizeof(ActorData));
+		actorArray->data[actorArray->count++] = TOY_OPAQUE_FROM_POINTER(actorData);
+		valuePtr = &actorArray->data[actorArray->count-1];
 	}
 
 	//finally, store the new actor's data
-	(*newActorPtr) = (ActorData){
+	(*(ActorData*)TOY_VALUE_AS_OPAQUE(*valuePtr)) = (ActorData){
 		.type = OPAQUE_ACTOR_DATA,
 		.spriteData = (SpriteData*)(TOY_VALUE_AS_OPAQUE(sprite)),
 		.spriteState = NULL,
 		.currentFrame = 0,
 		.position = { TOY_VALUE_AS_FLOAT(xpos), TOY_VALUE_AS_FLOAT(ypos) },
 		.onStep = onStep,
-		.enabled = true,
 	};
 
-	//leave the actor on the stack
-	Toy_Value value = TOY_OPAQUE_FROM_POINTER(newActorPtr);
-	Toy_pushStack(&vm->stack, value);
+	//leave the actor's reference on the stack
+	Toy_pushStack(&vm->stack, TOY_REFERENCE_FROM_POINTER(valuePtr));
 
 	Toy_freeValue(xpos);
 	Toy_freeValue(ypos);
@@ -221,7 +213,7 @@ typedef struct CallbackPairs {
 	Toy_nativeCallback callback;
 } CallbackPairs;
 
-//URGENT: No "unload" is currently implemented
+//URGENT: No "unload" is currently implemented (for sprites)
 static CallbackPairs callbackPairs[] = {
 	{"LoadSprite", api_loadSprite},
 	{"SpawnActorAt", api_spawnActorAt},
@@ -279,15 +271,15 @@ void freeActorAPI(Toy_VM* vm) {
 	for (unsigned int i = 0; i < actorArray->count; i++) {
 		ActorData* actorData = (ActorData*)TOY_VALUE_AS_OPAQUE(actorArray->data[i]);
 
-		//free the dead actor's internals
-		actorData->spriteData = NULL;
-		actorData->spriteState = NULL;
-		actorData->currentFrame = 0;
-		actorData->position = (Vector2){0,0};
+		if (actorData == NULL) {
+			continue;
+		}
+
+		//free the dead actors' internals
 		if (actorData->onStep != NULL) {
 			Toy_freeFunction(actorData->onStep);
-			actorData->onStep = NULL;
 		}
+		Toy_releaseBucketPartition((void*)actorData);
 	}
 
 	actorArray = Toy_resizeArray(actorArray, 0);
@@ -310,7 +302,7 @@ void processActors(Toy_VM* vm) {
 	for (unsigned int i = 0; i < actorArray->count; i++) {
 		ActorData* actor = (ActorData*)TOY_VALUE_AS_OPAQUE(actorArray->data[i]);
 
-		if (!actor->enabled || actor->onStep == NULL) {
+		if (actor == NULL || actor->onStep == NULL) {
 			continue;
 		}
 
@@ -355,31 +347,33 @@ void drawActors(Toy_VM* vm) {
 	for (unsigned int i = 0; i < actorArray->count; i++) {
 		ActorData* actor = (ActorData*)TOY_VALUE_AS_OPAQUE(actorArray->data[i]);
 
-		if (actor->enabled) {
-			if (actor->spriteState == NULL) {
-				//Texture2D texture, Rectangle source, Vector2 position, Color tint
-				DrawTextureRec(actor->spriteData->texture, actor->spriteData->rect, actor->position, WHITE);
-			}
+		if (actor == NULL) {
+			continue;
+		}
 
-			else {
-				//Texture2D texture, Rectangle source, Rectangle dest, Vector2 origin, float rotation, Color tint
-				DrawTexturePro(
-					actor->spriteData->texture,
-					(Rectangle){
-						actor->spriteData->rect.x + actor->currentFrame * actor->spriteData->rect.width,
-						actor->spriteData->rect.y + actor->spriteState->stripIndex * actor->spriteData->rect.height,
-						actor->spriteData->rect.width,
-						actor->spriteData->rect.height,
-					},
-					(Rectangle){actor->position.x, actor->position.y, actor->spriteData->rect.width, actor->spriteData->rect.height},
-					(Vector2){0,0},
-					0,
-					WHITE
-				);
+		if (actor->spriteState == NULL) {
+			//Texture2D texture, Rectangle source, Vector2 position, Color tint
+			DrawTextureRec(actor->spriteData->texture, actor->spriteData->rect, actor->position, WHITE);
+		}
 
-				//increment the currentFrame
-				actor->currentFrame = (actor->currentFrame + 1) % actor->spriteState->frameCount;
-			}
+		else {
+			//Texture2D texture, Rectangle source, Rectangle dest, Vector2 origin, float rotation, Color tint
+			DrawTexturePro(
+				actor->spriteData->texture,
+				(Rectangle){
+					actor->spriteData->rect.x + actor->currentFrame * actor->spriteData->rect.width,
+					actor->spriteData->rect.y + actor->spriteState->stripIndex * actor->spriteData->rect.height,
+					actor->spriteData->rect.width,
+					actor->spriteData->rect.height,
+				},
+				(Rectangle){actor->position.x, actor->position.y, actor->spriteData->rect.width, actor->spriteData->rect.height},
+				(Vector2){0,0},
+				0,
+				WHITE
+			);
+
+			//increment the currentFrame
+			actor->currentFrame = (actor->currentFrame + 1) % actor->spriteState->frameCount;
 		}
 	}
 }
@@ -389,7 +383,6 @@ static void attr_spriteAddAnimationState(Toy_VM* vm, Toy_FunctionNative* self) {
 	//sprite, anim-key, strip index, frame count
 	(void)self;
 
-	//remember, nothing is freed from a "method"
 	Toy_Value compound = Toy_popStack(&vm->stack);
 	Toy_Value frameCount = Toy_popStack(&vm->stack);
 	Toy_Value stripIndex = Toy_popStack(&vm->stack);
@@ -568,6 +561,37 @@ static void attr_actorSetAnimationState(Toy_VM* vm, Toy_FunctionNative* self) {
 	Toy_freeValue(key);
 }
 
+static void attr_actorDespawn(Toy_VM* vm, Toy_FunctionNative* self) {
+	(void)self;
+
+	Toy_Value compound = Toy_popStack(&vm->stack); //compound is (presumably) a reference
+
+	if (!TOY_VALUE_IS_REFERENCE(compound)) {
+		char buffer[256];
+		snprintf(buffer, 256, "Actor can't be despawned in 'ActorData.despawn()', expected value type %s, found %s", Toy_getValueTypeAsCString(TOY_VALUE_REFERENCE), Toy_getValueTypeAsCString(compound.type));
+		Toy_error(buffer);
+		return;
+	}
+
+	//clear the actor data within the bucket
+	ActorData* actorData = (ActorData*)TOY_VALUE_AS_OPAQUE(compound);
+
+	if (actorData->onStep != NULL) {
+		Toy_freeFunction(actorData->onStep);
+	}
+	Toy_releaseBucketPartition((void*)actorData);
+
+	//clear the actor data within the static array
+	for (unsigned int i = 0; i < actorArray->count; i++) {
+		if (TOY_VALUE_AS_OPAQUE(compound) == TOY_VALUE_AS_OPAQUE(actorArray->data[i])) {
+			actorArray->data[i] = TOY_VALUE_FROM_NULL();
+			return;
+		}
+	}
+
+	//WARN: the variable name will be invalid from this point onwards, I think?
+}
+
 Toy_Value handleActorAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attribute) {
 	//check for initialization
 	if (spriteTable == NULL || actorArray == NULL) {
@@ -600,6 +624,10 @@ Toy_Value handleActorAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attrib
 	}
 	else if (CSTR_MATCH(cstr, "setAnimationState")) {
 		Toy_Function* fn = Toy_createFunctionFromCallback(&vm->memoryBucket, attr_actorSetAnimationState);
+		return TOY_VALUE_FROM_FUNCTION(fn);
+	}
+	else if (CSTR_MATCH(cstr, "despawn")) {
+		Toy_Function* fn = Toy_createFunctionFromCallback(&vm->memoryBucket, attr_actorDespawn);
 		return TOY_VALUE_FROM_FUNCTION(fn);
 	}
 
