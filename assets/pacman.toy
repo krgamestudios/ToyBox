@@ -1,17 +1,29 @@
 //TODO: Recreate the classic arcade game Pacman, utilizing a custom tile grid for the maze
 //NOTE: https://shaunlebron.github.io/pacman-mazegen/
-//var grid: Opaque = CreateTileGrid(3, 3, [1, 2, 3, 4, 5, 6, 7, 8, 9]); //this also works, but change the coords below
+
+var defaultMap: Array = [
+	0, 0, 0, 0, 0,
+	0, 4, 5, 4, 0,
+	0, 4, 4, 4, 0,
+	0, 4, 4, 4, 0,
+	0, 4, 4, 7, 0,
+	0, 4, 6, 4, 0,
+	0, 4, 4, 4, 0,
+	0, 5, 4, 4, 0,
+	0, 4, 4, 7, 0,
+	0, 0, 0, 0, 0,
+];
 
 var grid: Opaque;
 var dungeonTiles: Opaque;
 
 fn onReady() {
-	grid = CreateTileGrid(32, 48, null);
+	grid = CreateTileGrid(5, 10, defaultMap);
 	dungeonTiles = LoadTileSet("assets/dungeontiles.png", 16, 16);
 }
 
 fn onFrame() {
-	//grid.drawToScreen(x, y, scaleX, scaleY, dungeonTiles);
+	grid.drawToScreen(50, 50, 3, 3, dungeonTiles);
 }
 
 fn onClose() {
@@ -21,3 +33,88 @@ fn onClose() {
 
 InitScreen(1280, 720, "Holy Puck!");
 InitLoop(onReady, onFrame, onClose);
+
+//TODO: no easy way to scale the actor sprites
+
+fn makePlayerCharacter(spriteName: String, spriteWidth: Int, spriteHeight: Int, spawnX: Int, spawnY: Int) {
+	//simple player components
+	var playerRef: Opaque = null;
+	var playerMaxMotion: Int = 5;
+	var playerMotionX: Int = 0;
+	var playerMotionY: Int = 0;
+	var facing: String = "south"; //valid values are "north", "south", "east", "west"
+
+	//on-frame use by the actors
+	fn playerOnFrame(player: Opaque) {
+		//handle keyboard input
+		if (KeyPressed.UP) {
+			playerMotionY -= 5;
+			facing = "north";
+		}
+		if (KeyPressed.DOWN) {
+			playerMotionY += 5;
+			facing = "south";
+		}
+		if (KeyPressed.LEFT) {
+			playerMotionX -= 5;
+			facing = "west";
+		}
+		if (KeyPressed.RIGHT) {
+			playerMotionX += 5;
+			facing = "east";
+		}
+
+		if (KeyReleased.UP) playerMotionY = min(playerMotionY + 5, 0);
+		if (KeyReleased.DOWN) playerMotionY = max(playerMotionY - 5, 0);
+		if (KeyReleased.LEFT) playerMotionX = min(playerMotionX + 5, 0);
+		if (KeyReleased.RIGHT) playerMotionX = max(playerMotionX - 5, 0);
+
+		//cap the max speed
+		playerMotionX = min(max(playerMotionX, -playerMaxMotion), playerMaxMotion);
+		playerMotionY = min(max(playerMotionY, -playerMaxMotion), playerMaxMotion);
+
+		//shortcut for normalized diagonal movement
+		var mod = 1;
+		if (playerMotionX != 0 && playerMotionY != 0) {
+			mod = 0.707;
+		}
+
+		//move the player
+		player.setX(player.x + floor(playerMotionX * mod));
+		player.setY(player.y + floor(playerMotionY * mod));
+
+		if (playerMotionX != 0 || playerMotionY != 0) {
+			player.setAnimationState(facing .. "-walk");
+		}
+		else {
+			player.setAnimationState(facing .. "-idle");
+		}
+	}
+
+	//load the player sprite
+	var playerSprite = LoadSprite(spriteName, spriteWidth, spriteHeight);
+
+	//configure the player's sprite
+	playerSprite.addAnimationState("south-idle", 0, 1);
+	playerSprite.addAnimationState("south-walk", 1, 3);
+	playerSprite.addAnimationState("south-kick", 2, 2);
+
+	playerSprite.addAnimationState("north-idle", 3, 1);
+	playerSprite.addAnimationState("north-walk", 4, 3);
+	playerSprite.addAnimationState("north-kick", 5, 2);
+
+	playerSprite.addAnimationState("east-idle", 6, 1);
+	playerSprite.addAnimationState("east-walk", 7, 3);
+	playerSprite.addAnimationState("east-kick", 8, 2);
+
+	playerSprite.addAnimationState("west-idle", 9, 1);
+	playerSprite.addAnimationState("west-walk", 10, 3);
+	playerSprite.addAnimationState("west-kick", 11, 2);
+
+	//spawn the player actor
+	playerRef = SpawnActorAt(spawnX, spawnY, playerSprite, playerOnFrame);
+	playerRef.setAnimationState("south-idle");
+	return playerRef;
+}
+
+makePlayerCharacter("assets/parvati.png", 32, 32, 500, 500);

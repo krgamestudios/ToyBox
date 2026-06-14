@@ -385,12 +385,13 @@ int main(int argc, const char* argv[]) {
 		//process the actors (if possible)
 		processActors(&vm);
 
+		//begin drawing before the call to onFrame
+		BeginDrawing();
+		ClearBackground(RAYWHITE);
+
 		//run the onFrame function
 		Toy_runVM(&vm); //no check needed, empty VMs are skipped
 
-		//drawing
-		BeginDrawing();
-		ClearBackground(RAYWHITE);
 		drawActors(&vm);
 		DrawFPS(0,0);
 		EndDrawing();

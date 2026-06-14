@@ -309,6 +309,81 @@ static void attr_tileGridGetTile(Toy_VM* vm, Toy_FunctionNative* self) {
 	Toy_freeValue(y);
 }
 
+static void attr_tileGridDrawToScreen(Toy_VM* vm, Toy_FunctionNative* self) {
+	(void)self;
+
+	Toy_Value tileGridValue = Toy_popStack(&vm->stack);
+	Toy_Value tileSetValue = Toy_popStack(&vm->stack);
+	Toy_Value scaleY = Toy_popStack(&vm->stack);
+	Toy_Value scaleX = Toy_popStack(&vm->stack);
+	Toy_Value posY = Toy_popStack(&vm->stack);
+	Toy_Value posX = Toy_popStack(&vm->stack);
+
+	//type coersion
+	if (TOY_VALUE_IS_INTEGER(posX)) posX = TOY_VALUE_FROM_FLOAT((float)(TOY_VALUE_AS_INTEGER(posX)));
+	if (TOY_VALUE_IS_INTEGER(posY)) posY = TOY_VALUE_FROM_FLOAT((float)(TOY_VALUE_AS_INTEGER(posY)));
+	if (TOY_VALUE_IS_INTEGER(scaleX)) scaleX = TOY_VALUE_FROM_FLOAT((float)(TOY_VALUE_AS_INTEGER(scaleX)));
+	if (TOY_VALUE_IS_INTEGER(scaleY)) scaleY = TOY_VALUE_FROM_FLOAT((float)(TOY_VALUE_AS_INTEGER(scaleY)));
+
+	//types
+	if (!TOY_VALUE_IS_FLOAT(posX) || !TOY_VALUE_IS_FLOAT(posY) || !TOY_VALUE_IS_FLOAT(scaleX) || !TOY_VALUE_IS_FLOAT(scaleY) || !TOY_VALUE_IS_OPAQUE(tileSetValue)) {
+		char buffer[256];
+		snprintf(buffer, 256, "Bad types found in 'TileGrid.drawToScreen()'");
+		Toy_error(buffer);
+		Toy_freeValue(tileGridValue);
+		Toy_freeValue(posX);
+		Toy_freeValue(posY);
+		Toy_freeValue(scaleX);
+		Toy_freeValue(scaleY);
+		Toy_freeValue(tileSetValue);
+		return;
+	}
+
+	//useable variables for convenience
+	TileGridData* tileGridData = (TileGridData*)TOY_VALUE_AS_OPAQUE(tileGridValue);
+	TileSetData* tileSetData = (TileSetData*)TOY_VALUE_AS_OPAQUE(tileSetValue);
+	unsigned int tileSetXCount = tileSetData->texture.width / tileSetData->tileWidth;
+	unsigned int tileSetYCount = tileSetData->texture.height / tileSetData->tileHeight;
+	Vector2 position = {
+		.x = TOY_VALUE_AS_FLOAT(posX),
+		.y = TOY_VALUE_AS_FLOAT(posY),
+	};
+	Vector2 scale = {
+		.x = TOY_VALUE_AS_FLOAT(scaleX),
+		.y = TOY_VALUE_AS_FLOAT(scaleY),
+	};
+
+	(void)tileSetYCount;
+
+	//
+	for (unsigned int j = 0; j < tileGridData->height; j++) {
+		for (unsigned int i = 0; i < tileGridData->width; i++) {
+			//the tile to be drawn
+			unsigned int tileData = tileGridData->cells[j * tileGridData->width + i];
+
+			//Texture2D texture, Rectangle source, Rectangle dest, Vector2 origin, float rotation, Color tint
+			DrawTexturePro(
+				tileSetData->texture,
+				(Rectangle){
+					(tileData % tileSetXCount) * tileSetData->tileWidth,
+					(tileData / tileSetXCount) * tileSetData->tileHeight,
+					tileSetData->tileWidth,
+					tileSetData->tileHeight,
+				},
+				(Rectangle){
+					position.x + i * tileSetData->tileWidth * scale.x,
+					position.y + j * tileSetData->tileHeight * scale.y,
+					tileSetData->tileWidth * scale.x,
+					tileSetData->tileHeight * scale.y,
+				},
+				(Vector2){0,0}, //top-left
+				0,
+				WHITE
+			);
+		}
+	}
+}
+
 static void attr_tileGridUnload(Toy_VM* vm, Toy_FunctionNative* self) {
 	(void)self;
 
@@ -338,17 +413,18 @@ Toy_Value handleTileGridAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value att
 	else if (CSTR_MATCH(cstr, "height")) {
 		return TOY_VALUE_FROM_INTEGER(tileGridData->height);
 	}
-
 	else if (CSTR_MATCH(cstr, "setTile")) {
 		Toy_Function* fn = Toy_createFunctionFromCallback(&vm->memoryBucket, attr_tileGridSetTile);
 		return TOY_VALUE_FROM_FUNCTION(fn);
 	}
-
 	else if (CSTR_MATCH(cstr, "getTile")) {
 		Toy_Function* fn = Toy_createFunctionFromCallback(&vm->memoryBucket, attr_tileGridGetTile);
 		return TOY_VALUE_FROM_FUNCTION(fn);
 	}
-
+	else if (CSTR_MATCH(cstr, "drawToScreen")) {
+		Toy_Function* fn = Toy_createFunctionFromCallback(&vm->memoryBucket, attr_tileGridDrawToScreen);
+		return TOY_VALUE_FROM_FUNCTION(fn);
+	}
 	else if (CSTR_MATCH(cstr, "unload")) {
 		Toy_Function* fn = Toy_createFunctionFromCallback(&vm->memoryBucket, attr_tileGridUnload);
 		return TOY_VALUE_FROM_FUNCTION(fn);
