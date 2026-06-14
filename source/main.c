@@ -262,6 +262,9 @@ Toy_Value dispatchOpaqueAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value att
 		case OPAQUE_ACTOR_DATA:
 			return handleActorAttributes(vm, compound, attribute);
 
+		case OPAQUE_TILE_SET:
+			return handleTileSetAttributes(vm, compound, attribute);
+
 		case OPAQUE_TILE_GRID:
 			return handleTileGridAttributes(vm, compound, attribute);
 	}
@@ -336,7 +339,7 @@ int main(int argc, const char* argv[]) {
 		helpInfo(argc, argv);
 		return 0;
 	}
-	uncappedFPS = settings.uncappedFPS;
+	uncappedFPS = settings.uncappedFPS; //static, because lazy
 
 	//load the entry point
 	int size = 0;

@@ -66,7 +66,6 @@ static void api_loadSprite(Toy_VM* vm, Toy_FunctionNative* self) {
 	if (TOY_VALUE_IS_NULL(spriteValue)) {
 		//create the sprite's data stored in the bucket
 		SpriteData* sprite = (SpriteData*)Toy_partitionBucket(&(vm->memoryBucket), sizeof(SpriteData));
-
 		sprite->type = OPAQUE_SPRITE_DATA;
 
 		//load the texture from a file
@@ -256,7 +255,7 @@ void freeActorAPI(Toy_VM* vm) {
 			for (unsigned int j = 0; statesTable != NULL && j < statesTable->capacity; j++) {
 				if (!TOY_VALUE_IS_NULL(statesTable->data[j].key) && TOY_VALUE_IS_OPAQUE(statesTable->data[j].value)) {
 					SpriteState* state = (SpriteState*)TOY_VALUE_AS_OPAQUE(statesTable->data[j].value);
-					Toy_releaseBucketPartition((unsigned char*)state); //this was partitioned in 'attr_spriteAddAnimationState'
+					Toy_releaseBucketPartition((void*)state); //this was partitioned in 'attr_spriteAddAnimationState'
 				}
 			}
 
@@ -449,7 +448,7 @@ Toy_Value handleSpriteAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attri
 	}
 }
 
-//opaque attributes for actor
+//opaque attributes for actors
 static void attr_actorSetX(Toy_VM* vm, Toy_FunctionNative* self) {
 	(void)self;
 

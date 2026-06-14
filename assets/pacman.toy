@@ -1,23 +1,23 @@
 //TODO: Recreate the classic arcade game Pacman, utilizing a custom tile grid for the maze
-
 //NOTE: https://shaunlebron.github.io/pacman-mazegen/
-
 //var grid: Opaque = CreateTileGrid(3, 3, [1, 2, 3, 4, 5, 6, 7, 8, 9]); //this also works, but change the coords below
-var grid: Opaque = CreateTileGrid(32, 48, null);
 
+var grid: Opaque;
+var dungeonTiles: Opaque;
 
 fn onReady() {
-	print grid;
-	print grid.width;
-	print grid.height;
-
-	print grid.getTile(10, 10);
-
-	grid.setTile(10, 10, 42);
-
-	print grid.getTile(10, 10);
+	grid = CreateTileGrid(32, 48, null);
+	dungeonTiles = LoadTileSet("assets/dungeontiles.png", 16, 16);
 }
 
+fn onFrame() {
+	//grid.drawToScreen(x, y, scaleX, scaleY, dungeonTiles);
+}
+
+fn onClose() {
+	grid.unload();
+	dungeonTiles.unload();
+}
 
 InitScreen(1280, 720, "Holy Puck!");
-InitLoop(onReady, null, null);
+InitLoop(onReady, onFrame, onClose);

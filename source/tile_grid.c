@@ -5,7 +5,69 @@
 #include <stdlib.h>
 #include <string.h>
 
+//util macro
+#define CSTR_MATCH(FIRST, SECOND) (strlen(FIRST) == strlen(SECOND) && strcmp(FIRST, SECOND) == 0)
+
+static void api_loadTileSet(Toy_VM* vm, Toy_FunctionNative* self) {
+	//file name, tile width, tile height -> Opaque(TileSet)
+	(void)self;
+
+	if (!IsWindowReady()) {
+		char buffer[256];
+		snprintf(buffer, 256, "Can't load tilesets before the window has been initialized");
+		Toy_error(buffer);
+		return;
+	}
+
+	if (vm->stack->count < 3) {
+		char buffer[256];
+		snprintf(buffer, 256, "Not enough parameters found in 'loadTileSet'");
+		Toy_error(buffer);
+		return;
+	}
+
+	Toy_Value tileHeight = Toy_popStack(&vm->stack);
+	Toy_Value tileWidth = Toy_popStack(&vm->stack);
+	Toy_Value file = Toy_popStack(&vm->stack);
+
+	//check types
+	if (!TOY_VALUE_IS_STRING(file) || !TOY_VALUE_IS_INTEGER(tileWidth) || !TOY_VALUE_IS_INTEGER(tileHeight)) {
+		char buffer[256];
+		snprintf(buffer, 256, "Bad parameter types found in 'loadTileSet'");
+		Toy_error(buffer);
+		Toy_freeValue(file);
+		Toy_freeValue(tileWidth);
+		Toy_freeValue(tileHeight);
+		return;
+	}
+
+	TileSetData* tileSetData = (TileSetData*)Toy_partitionBucket(&(vm->memoryBucket), sizeof(TileSetData));
+	tileSetData->type = OPAQUE_TILE_SET;
+
+	//load the texture from a file
+	Toy_String* str = TOY_VALUE_AS_STRING(file);
+	if (str->info.type == TOY_STRING_LEAF) {
+		tileSetData->texture = LoadTexture(str->leaf.data);
+	}
+	else {
+		char* cstr = Toy_getStringRaw(str);
+		tileSetData->texture = LoadTexture(cstr);
+		free(cstr);
+	}
+
+	tileSetData->tileWidth = TOY_VALUE_AS_INTEGER(tileWidth);
+	tileSetData->tileHeight = TOY_VALUE_AS_INTEGER(tileHeight);
+
+	Toy_Value tileSetValue = TOY_OPAQUE_FROM_POINTER(tileSetData);
+	Toy_pushStack(&vm->stack, tileSetValue);
+
+	Toy_freeValue(file);
+	Toy_freeValue(tileWidth);
+	Toy_freeValue(tileHeight);
+}
+
 void api_createTileGrid(Toy_VM* vm, Toy_FunctionNative* self) {
+	//width, height, initial state -> Opaque(TileGrid)
 	(void)self;
 
 	Toy_Value initial = Toy_popStack(&vm->stack);
@@ -97,8 +159,8 @@ typedef struct CallbackPairs {
 	Toy_nativeCallback callback;
 } CallbackPairs;
 
-//URGENT: No "unload" is currently implemented, so grids will leak
 static CallbackPairs callbackPairs[] = {
+	{"LoadTileSet", api_loadTileSet},
 	{"CreateTileGrid", api_createTileGrid},
 	{NULL, NULL},
 };
@@ -120,7 +182,49 @@ void initTileGridAPI(Toy_VM* vm) {
 	}
 }
 
-//opaque attributes
+//opaque attributes for tile sets
+static void attr_tileSetUnload(Toy_VM* vm, Toy_FunctionNative* self) {
+	(void)self;
+
+	Toy_Value compound = Toy_popStack(&vm->stack);
+	TileSetData* tileSetData = (TileSetData*)TOY_VALUE_AS_OPAQUE(compound);
+
+	UnloadTexture(tileSetData->texture);
+	Toy_releaseBucketPartition((void*)tileSetData);
+
+	//WARN: the variable name will be invalid from this point onwards, I think?
+}
+
+Toy_Value handleTileSetAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attribute) {
+	TileSetData* tileSetData = (TileSetData*)TOY_VALUE_AS_OPAQUE(compound);
+
+	(void)vm;
+
+	//the attribute we're looking for
+	Toy_String* string = TOY_VALUE_AS_STRING(attribute);
+	const char* cstr = string->leaf.data;
+
+	//find the correct operation
+	if (CSTR_MATCH(cstr, "tileWidth")) {
+		return TOY_VALUE_FROM_INTEGER(tileSetData->tileWidth);
+	}
+	else if (CSTR_MATCH(cstr, "tileHeight")) {
+		return TOY_VALUE_FROM_INTEGER(tileSetData->tileHeight);
+	}
+	else if (CSTR_MATCH(cstr, "unload")) {
+		Toy_Function* fn = Toy_createFunctionFromCallback(&vm->memoryBucket, attr_tileSetUnload);
+		return TOY_VALUE_FROM_FUNCTION(fn);
+	}
+
+	else {
+		char buffer[256];
+		snprintf(buffer, 256, "Unknown TileSet attribute '%s'", cstr);
+		Toy_error(buffer);
+		return TOY_VALUE_FROM_NULL();
+	}
+}
+
+//opaque attributes for tile grids
 static void attr_tileGridSetTile(Toy_VM* vm, Toy_FunctionNative* self) {
 	(void)self;
 
@@ -205,7 +309,17 @@ static void attr_tileGridGetTile(Toy_VM* vm, Toy_FunctionNative* self) {
 	Toy_freeValue(y);
 }
 
-#define CSTR_MATCH(FIRST, SECOND) (strlen(FIRST) == strlen(SECOND) && strcmp(FIRST, SECOND) == 0)
+static void attr_tileGridUnload(Toy_VM* vm, Toy_FunctionNative* self) {
+	(void)self;
+
+	Toy_Value compound = Toy_popStack(&vm->stack);
+	TileGridData* tileGridData = (TileGridData*)TOY_VALUE_AS_OPAQUE(compound);
+
+	free(tileGridData->cells);
+	Toy_releaseBucketPartition((void*)tileGridData);
+
+	//WARN: the variable name will be invalid from this point onwards, I think?
+}
 
 Toy_Value handleTileGridAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attribute) {
 	//useable grid
@@ -232,6 +346,11 @@ Toy_Value handleTileGridAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value att
 
 	else if (CSTR_MATCH(cstr, "getTile")) {
 		Toy_Function* fn = Toy_createFunctionFromCallback(&vm->memoryBucket, attr_tileGridGetTile);
+		return TOY_VALUE_FROM_FUNCTION(fn);
+	}
+
+	else if (CSTR_MATCH(cstr, "unload")) {
+		Toy_Function* fn = Toy_createFunctionFromCallback(&vm->memoryBucket, attr_tileGridUnload);
 		return TOY_VALUE_FROM_FUNCTION(fn);
 	}
 
