@@ -12,18 +12,14 @@ cmake --build build
 cd build && sudo make install
 ```
 
-## Asset Credits
+# Contributors and Special Thanks
 
-Some assets have been renamed as needed, and used with implied permissions.
+<p align="center">
+	<image src="noai.png" alt="No AI" width="200px" />
+</p>
 
-Graphical assets provided by LogicMonkey, extracted from older collaborative projects:
+Contributions via the [GitHub mirror](https://github.com/krgamestudios/ToyBox) are welcome, but absolutely no AI contributions will be accepted.
 
-* cartoon_plane.png
-* drone.png
-* dungeontiles.png
-* explosion.png
-* parvati.png
-
-Other misc. assets:
-
-* pixelcards.png created by [IvoryRed](https://ivoryred.itch.io/pixel-poker-cards), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+Suyash Dwivedi - "No AI" logo [via wikimedia, CC BY-SA 4.0](https://commons.wikimedia.org/w/index.php?curid=165477595)  
+LogicMonkey - Multiple sprites  
+[IvoryRed](https://ivoryred.itch.io/pixel-poker-cards) - pixelcards.png [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)  
