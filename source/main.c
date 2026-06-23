@@ -85,7 +85,7 @@ unsigned char* makeCodeFromSource(const char* source) {
 typedef struct Settings {
 	bool error;
 	bool help;
-	bool version; //TODO: version info missing
+	bool version;
 	const char* script;
 	bool verbose; //TODO: verbose info missing
 	bool uncappedFPS;
@@ -93,21 +93,79 @@ typedef struct Settings {
 
 void usageInfo(int argc, const char* argv[]) {
 	(void)argc;
-	printf("Usage: %s [-c] [ -h | -f script.toy ]\n\n", argv[0]);
+	printf("Usage: %s [-h] [-v] [-c] [-f script.toy]\n\n", argv[0]);
 }
 
 void helpInfo(int argc, const char* argv[]) {
 	usageInfo(argc, argv);
 
-	printf("ToyBox, a test game for The Toy Programming Langauge. Requires raylib and Toy by default.\n\nSee https://toylang.com for details.\n\n");
+	printf("ToyBox, a game engine for The Toy Programming Langauge. Requires raylib and Toy by default.\nSee https://toylang.com for details.\n\n");
 
 	printf("  -h, --help\t\t\tShow this help then exit.\n");
-	// printf("  -v, --version\t\t\tShow version and copyright information then exit.\n");
+	printf("  -v, --version\t\t\tShow version and copyright information then exit.\n");
 	printf("  -f, --file script\t\tStart the game with the given script.\n");
 	// printf("  -d, --verbose\t\tPrint debugging information about Toy's internals.\n");
 	printf("  -c, --no-fps-cap\t\tRemove the 60 FPS cap.\n");
 
 	printf("\n");
+}
+
+void versionInfo(int argc, const char* argv[]) {
+	(void)argc;
+	(void)argv;
+
+	const char* boxLicense =
+		"Copyright (c) 2026 Kayne Ruse, KR Game Studios\n"
+		"\n"
+		"This software is provided 'as-is', without any express or implied\n"
+		"warranty. In no event will the authors be held liable for any damages\n"
+		"arising from the use of this software.\n"
+		"\n"
+		"Permission is granted to anyone to use this software for any purpose,\n"
+		"including commercial applications, and to alter it and redistribute it\n"
+		"freely, subject to the following restrictions:\n"
+		"\n"
+		"1. The origin of this software must not be misrepresented; you must not\n"
+		"claim that you wrote the original software. If you use this software\n"
+		"in a product, an acknowledgment in the product documentation would be\n"
+		"appreciated but is not required.\n"
+		"2. Altered source versions must be plainly marked as such, and must not be\n"
+		"misrepresented as being the original software.\n"
+		"3. This notice may not be removed or altered from any source distribution.\n"
+		"\n"
+	;
+
+	//Toy copyright
+	const char* toyLicense =
+		"Copyright (c) 2020-2026 Kayne Ruse, KR Game Studios\n"
+		"\n"
+		"This software is provided 'as-is', without any express or implied\n"
+		"warranty. In no event will the authors be held liable for any damages\n"
+		"arising from the use of this software.\n"
+		"\n"
+		"Permission is granted to anyone to use this software for any purpose,\n"
+		"including commercial applications, and to alter it and redistribute it\n"
+		"freely, subject to the following restrictions:\n"
+		"\n"
+		"1. The origin of this software must not be misrepresented; you must not\n"
+		"claim that you wrote the original software. If you use this software\n"
+		"in a product, an acknowledgment in the product documentation would be\n"
+		"appreciated but is not required.\n"
+		"2. Altered source versions must be plainly marked as such, and must not be\n"
+		"misrepresented as being the original software.\n"
+		"3. This notice may not be removed or altered from any source distribution.\n"
+		"\n"
+	;
+
+	printf("The ToyBox Game Engine and The Toy Programming Langauge are released under the zlib license.\n\n");
+
+	printf("-------------------------\n\n");
+
+	printf("The ToyBox Game Engine, This Version is in Early Development\n\n%s", boxLicense);
+
+	printf("-------------------------\n\n");
+
+	printf("The Toy Programming Language, Version %d.%d.%d %s\n\n%s", TOY_VERSION_MAJOR, TOY_VERSION_MINOR, TOY_VERSION_PATCH, TOY_VERSION_BUILD, toyLicense);
 }
 
 Settings parseSettings(int argc, const char* argv[]) {
@@ -335,8 +393,12 @@ int main(int argc, const char* argv[]) {
 		usageInfo(argc, argv);
 		return 1;
 	}
-	if (settings.help) {
+	else if (settings.help) {
 		helpInfo(argc, argv);
+		return 0;
+	}
+	else if (settings.version) {
+		versionInfo(argc, argv);
 		return 0;
 	}
 	uncappedFPS = settings.uncappedFPS; //static, because lazy
