@@ -1,0 +1,133 @@
+fn sign(x) { //TODO: add sign() to stdlib
+	if (x < 0) {
+		return -1;
+	}
+	else if (x > 0) {
+		return 1;
+	}
+	else {
+		return 0;
+	}
+}
+
+//NOTE: player moves in a grid-like pattern
+fn makePlayerCharacter(spriteName: String, spawnX: Int, spawnY: Int, tileWidth: Int, tileHeight: Int) {
+	//simple player components
+	var playerRef: Opaque = null;
+
+	var playerGridX: Int = spawnX;
+	var playerGridY: Int = spawnY;
+
+	var playerFacing: String = "south"; //valid values are "north", "south", "east", "west"
+
+	//on-frame use by the actors
+	fn playerOnFrame(player: Opaque) {
+		//only accept input when on a grid line
+		if (playerRef.x % tileWidth == 0 && playerRef.y % tileHeight == 0) {
+			if (Keyboard.UP) {
+				playerGridY -= 1;
+				playerFacing = "north";
+			}
+
+			else if (Keyboard.DOWN) {
+				playerGridY += 1;
+				playerFacing = "south";
+			}
+
+			else if (Keyboard.LEFT) {
+				playerGridX -= 1;
+				playerFacing = "west";
+			}
+
+			else if (Keyboard.RIGHT) {
+				playerGridX += 1;
+				playerFacing = "east";
+			}
+		}
+
+		//if grid location doesn't match actual location, move to correct grid location
+		if (playerGridX * tileWidth != playerRef.x) {
+			var dir = sign(playerGridX * tileWidth - playerRef.x);
+			playerRef.setX(playerRef.x + dir * 2);
+			playerRef.setAnimationState(playerFacing .. "-walk");
+		}
+
+		else if (playerGridY * tileHeight != playerRef.y) {
+			var dir = sign(playerGridY * tileHeight - playerRef.y);
+			playerRef.setY(playerRef.y + dir * 2);
+			playerRef.setAnimationState(playerFacing .. "-walk");
+		}
+
+		else {
+			playerRef.setAnimationState(playerFacing .. "-idle");
+		}
+	}
+
+	//load the player's sprite
+	var playerSprite = LoadSprite(spriteName, tileWidth, tileHeight);
+
+	//BUG: loading a second parvati sprite would cause the calls to `addAnimationState` to output an error
+
+	//configure the player's sprite
+	playerSprite.addAnimationState("south-idle", 0, 1);
+	playerSprite.addAnimationState("south-walk", 1, 3);
+	playerSprite.addAnimationState("south-kick", 2, 2);
+
+	playerSprite.addAnimationState("north-idle", 3, 1);
+	playerSprite.addAnimationState("north-walk", 4, 3);
+	playerSprite.addAnimationState("north-kick", 5, 2);
+
+	playerSprite.addAnimationState("east-idle", 6, 1);
+	playerSprite.addAnimationState("east-walk", 7, 3);
+	playerSprite.addAnimationState("east-kick", 8, 2);
+
+	playerSprite.addAnimationState("west-idle", 9, 1);
+	playerSprite.addAnimationState("west-walk", 10, 3);
+	playerSprite.addAnimationState("west-kick", 11, 2);
+
+	//finally, spawn the player's actor
+	playerRef = SpawnActorAt(playerGridX * tileWidth, playerGridY * tileHeight, playerSprite, playerOnFrame);
+	playerRef.setAnimationState("south-idle");
+	return playerRef;
+}
+
+fn makeDrone(sprite: Opaque, spawnX: Int, spawnY: Int, tileWidth: Int, tileHeight: Int) {
+	//simple components
+	var actorRef: Opaque = null;
+
+	var gridX: Int = spawnX;
+	var gridY: Int = spawnY;
+
+	var facing: String = "south"; //valid values are "north", "south", "east", "west"
+
+	//onFrame
+	fn onFrame(actor: Opaque) {
+		//TODO: add the I-go-you-go logic
+	}
+
+	//finally, spawn the actor
+	actorRef = SpawnActorAt(gridX * tileWidth, gridY * tileHeight, sprite, onFrame);
+	actorRef.setAnimationState("south");
+	return actorRef;
+}
+
+//Grid movement
+InitScreen(1280, 720, "Welcome to the Grid");
+Camera.setScaleX(2);
+Camera.setScaleY(2);
+//InitLoop(onReady, onFrame, onClose);
+
+makePlayerCharacter("assets/parvati.png", 0, 0, 32, 32);
+
+//load the drone sprite
+var sprite = LoadSprite("assets/drone.png", 32, 32);
+sprite.addAnimationState("south", 0, 2); //TODO: add animation speed for each state
+sprite.addAnimationState("north", 1, 2);
+sprite.addAnimationState("east", 2, 2);
+sprite.addAnimationState("west", 3, 2);
+
+//make drones
+makeDrone(sprite, 4, 4, 32, 32);
+makeDrone(sprite, 6, 4, 32, 32);
+makeDrone(sprite, 4, 6, 32, 32);
+makeDrone(sprite, 6, 6, 32, 32);

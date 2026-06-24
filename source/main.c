@@ -88,7 +88,7 @@ typedef struct Settings {
 	bool help;
 	bool version;
 	const char* script;
-	bool verbose; //TODO: verbose info missing
+	bool verbose;
 	bool uncappedFPS;
 } Settings;
 
@@ -105,7 +105,7 @@ void helpInfo(int argc, const char* argv[]) {
 	printf("  -h, --help\t\t\tShow this help then exit.\n");
 	printf("  -v, --version\t\t\tShow version and copyright information then exit.\n");
 	printf("  -f, --file script\t\tStart the game with the given script.\n");
-	// printf("  -d, --verbose\t\tPrint debugging information about Toy's internals.\n");
+	printf("  -d, --verbose\t\tEnable debugging and diagnostics display.\n");
 	printf("  -c, --no-fps-cap\t\tRemove the 60 FPS cap.\n");
 
 	printf("\n");
@@ -213,10 +213,11 @@ Settings parseSettings(int argc, const char* argv[]) {
 	return settings;
 }
 
-//static pointers
+//static members
 static Toy_Function* onReady = NULL;
 static Toy_Function* onFrame = NULL;
 static Toy_Function* onClose = NULL;
+static bool verbose = false;
 static bool uncappedFPS = false;
 
 //game API definitions
@@ -407,7 +408,10 @@ int main(int argc, const char* argv[]) {
 		versionInfo(argc, argv);
 		return 0;
 	}
-	uncappedFPS = settings.uncappedFPS; //static, because lazy
+
+	//static flags to avoid extra params
+	verbose = settings.verbose;
+	uncappedFPS = settings.uncappedFPS;
 
 	//load the entry point
 	int size = 0;
@@ -426,7 +430,7 @@ int main(int argc, const char* argv[]) {
 
 	unsigned char* entryCode = makeCodeFromSource(source);
 
-	//build and run the VM with APIs
+	//build and run the VM with all the APIs
 	Toy_VM vm;
 	Toy_initVM(&vm);
 	Toy_bindVM(&vm, entryCode, NULL);
@@ -437,7 +441,7 @@ int main(int argc, const char* argv[]) {
 	Toy_runVM(&vm);
 	Toy_resetVM(&vm, false, false); //leave in a valid, but unset state
 
-	//setup and run the given loop functions
+	//setup and run the given loop functions, if able
 	if (onReady != NULL) {
 		Toy_bindVM(&vm, onReady->bytecode.code, onReady->bytecode.parentScope);
 		Toy_runVM(&vm);
@@ -455,13 +459,17 @@ int main(int argc, const char* argv[]) {
 
 		//begin drawing before the call to onFrame
 		BeginDrawing();
-		ClearBackground(RAYWHITE);
+		ClearBackground(WHITE); //TODO: remove this once the whole screen is covered
 
 		//run the onFrame function
 		Toy_runVM(&vm); //no check needed, empty VMs are skipped
 
 		drawActors(&vm);
-		DrawFPS(0,0);
+
+		if (verbose) {
+			DrawFPS(0,0);
+		}
+
 		EndDrawing();
 	}
 
