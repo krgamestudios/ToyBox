@@ -1,5 +1,7 @@
 #include "actor.h"
 
+#include "camera.h"
+
 #include "toy_console_colors.h"
 #include "toy_table.h"
 #include "toy_array.h"
@@ -350,28 +352,28 @@ void drawActors(Toy_VM* vm) {
 			continue;
 		}
 
-		if (actor->spriteState == NULL) {
-			//Texture2D texture, Rectangle source, Vector2 position, Color tint
-			DrawTextureRec(actor->spriteData->texture, actor->spriteData->rect, actor->position, WHITE);
-		}
+		//Texture2D texture, Rectangle source, Rectangle dest, Vector2 origin, float rotation, Color tint
+		DrawTexturePro(
+			actor->spriteData->texture,
+			(Rectangle){
+				actor->spriteData->rect.x + actor->currentFrame * actor->spriteData->rect.width,
+				actor->spriteData->rect.y + (actor->spriteState != NULL ? actor->spriteState->stripIndex : 0) * actor->spriteData->rect.height,
+				actor->spriteData->rect.width,
+				actor->spriteData->rect.height,
+			},
+			(Rectangle){
+				(actor->position.x - cameraData.offsetX) * cameraData.scaleX,
+				(actor->position.y - cameraData.offsetY) * cameraData.scaleY,
+				actor->spriteData->rect.width * cameraData.scaleX,
+				actor->spriteData->rect.height * cameraData.scaleY,
+			},
+			(Vector2){0,0},
+			0,
+			WHITE
+		);
 
-		else {
-			//Texture2D texture, Rectangle source, Rectangle dest, Vector2 origin, float rotation, Color tint
-			DrawTexturePro(
-				actor->spriteData->texture,
-				(Rectangle){
-					actor->spriteData->rect.x + actor->currentFrame * actor->spriteData->rect.width,
-					actor->spriteData->rect.y + actor->spriteState->stripIndex * actor->spriteData->rect.height,
-					actor->spriteData->rect.width,
-					actor->spriteData->rect.height,
-				},
-				(Rectangle){actor->position.x, actor->position.y, actor->spriteData->rect.width, actor->spriteData->rect.height},
-				(Vector2){0,0},
-				0,
-				WHITE
-			);
-
-			//increment the currentFrame
+		//increment the currentFrame
+		if (actor->spriteState != NULL) {
 			actor->currentFrame = (actor->currentFrame + 1) % actor->spriteState->frameCount;
 		}
 	}

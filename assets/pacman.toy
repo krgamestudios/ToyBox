@@ -2,16 +2,16 @@
 //NOTE: https://shaunlebron.github.io/pacman-mazegen/
 
 var defaultMap: Array = [
-	0, 0, 0, 0, 0,
-	0, 4, 5, 4, 0,
-	0, 4, 4, 4, 0,
-	0, 4, 4, 4, 0,
-	0, 4, 4, 7, 0,
-	0, 4, 6, 4, 0,
-	0, 4, 4, 4, 0,
-	0, 5, 4, 4, 0,
-	0, 4, 4, 7, 0,
-	0, 0, 0, 0, 0,
+	12, 8, 8, 8, 13,
+	10, 4, 5, 4, 11,
+	10, 4, 4, 4, 11,
+	10, 4, 4, 4, 11,
+	10, 4, 4, 7, 11,
+	10, 4, 6, 4, 11,
+	10, 4, 4, 4, 11,
+	10, 5, 4, 4, 11,
+	10, 4, 4, 7, 11,
+	14, 9, 9, 9, 15,
 ];
 
 var grid: Opaque;
@@ -20,10 +20,15 @@ var dungeonTiles: Opaque;
 fn onReady() {
 	grid = CreateTileGrid(5, 10, defaultMap);
 	dungeonTiles = LoadTileSet("assets/dungeontiles.png", 16, 16);
+
+	Camera.setOffsetX(-100);
+	Camera.setOffsetY(0);
+	Camera.setScaleX(2);
+	Camera.setScaleY(2);
 }
 
 fn onFrame() {
-	grid.drawToScreen(50, 50, 3, 3, dungeonTiles);
+	grid.drawToScreen(0, 0, dungeonTiles);
 }
 
 fn onClose() {
@@ -34,9 +39,7 @@ fn onClose() {
 InitScreen(1280, 720, "Holy Puck!");
 InitLoop(onReady, onFrame, onClose);
 
-//TODO: no easy way to scale the actor sprites
-
-fn makePlayerCharacter(spriteName: String, spriteWidth: Int, spriteHeight: Int, spawnX: Int, spawnY: Int) {
+fn makePlayerCharacter(spriteName: String, spriteWidth: Int, spriteHeight: Int, spawnX: Float, spawnY: Float) {
 	//simple player components
 	var playerRef: Opaque = null;
 	var playerMaxMotion: Int = 5;
@@ -117,4 +120,4 @@ fn makePlayerCharacter(spriteName: String, spriteWidth: Int, spriteHeight: Int, 
 	return playerRef;
 }
 
-makePlayerCharacter("assets/parvati.png", 32, 32, 500, 500);
+makePlayerCharacter("assets/parvati.png", 32, 32, 100, 100);

@@ -1,4 +1,6 @@
 #include "tile_grid.h"
+#include "camera.h"
+
 #include "toy_console_colors.h"
 
 #include <stdio.h>
@@ -314,27 +316,21 @@ static void attr_tileGridDrawToScreen(Toy_VM* vm, Toy_FunctionNative* self) {
 
 	Toy_Value tileGridValue = Toy_popStack(&vm->stack);
 	Toy_Value tileSetValue = Toy_popStack(&vm->stack);
-	Toy_Value scaleY = Toy_popStack(&vm->stack);
-	Toy_Value scaleX = Toy_popStack(&vm->stack);
 	Toy_Value posY = Toy_popStack(&vm->stack);
 	Toy_Value posX = Toy_popStack(&vm->stack);
 
 	//type coersion
 	if (TOY_VALUE_IS_INTEGER(posX)) posX = TOY_VALUE_FROM_FLOAT((float)(TOY_VALUE_AS_INTEGER(posX)));
 	if (TOY_VALUE_IS_INTEGER(posY)) posY = TOY_VALUE_FROM_FLOAT((float)(TOY_VALUE_AS_INTEGER(posY)));
-	if (TOY_VALUE_IS_INTEGER(scaleX)) scaleX = TOY_VALUE_FROM_FLOAT((float)(TOY_VALUE_AS_INTEGER(scaleX)));
-	if (TOY_VALUE_IS_INTEGER(scaleY)) scaleY = TOY_VALUE_FROM_FLOAT((float)(TOY_VALUE_AS_INTEGER(scaleY)));
 
 	//types
-	if (!TOY_VALUE_IS_FLOAT(posX) || !TOY_VALUE_IS_FLOAT(posY) || !TOY_VALUE_IS_FLOAT(scaleX) || !TOY_VALUE_IS_FLOAT(scaleY) || !TOY_VALUE_IS_OPAQUE(tileSetValue)) {
+	if (!TOY_VALUE_IS_FLOAT(posX) || !TOY_VALUE_IS_FLOAT(posY) || !TOY_VALUE_IS_OPAQUE(tileSetValue)) {
 		char buffer[256];
 		snprintf(buffer, 256, "Bad types found in 'TileGrid.drawToScreen()'");
 		Toy_error(buffer);
 		Toy_freeValue(tileGridValue);
 		Toy_freeValue(posX);
 		Toy_freeValue(posY);
-		Toy_freeValue(scaleX);
-		Toy_freeValue(scaleY);
 		Toy_freeValue(tileSetValue);
 		return;
 	}
@@ -344,14 +340,6 @@ static void attr_tileGridDrawToScreen(Toy_VM* vm, Toy_FunctionNative* self) {
 	TileSetData* tileSetData = (TileSetData*)TOY_VALUE_AS_OPAQUE(tileSetValue);
 	unsigned int tileSetXCount = tileSetData->texture.width / tileSetData->tileWidth;
 	unsigned int tileSetYCount = tileSetData->texture.height / tileSetData->tileHeight;
-	Vector2 position = {
-		.x = TOY_VALUE_AS_FLOAT(posX),
-		.y = TOY_VALUE_AS_FLOAT(posY),
-	};
-	Vector2 scale = {
-		.x = TOY_VALUE_AS_FLOAT(scaleX),
-		.y = TOY_VALUE_AS_FLOAT(scaleY),
-	};
 
 	(void)tileSetYCount;
 
@@ -371,10 +359,10 @@ static void attr_tileGridDrawToScreen(Toy_VM* vm, Toy_FunctionNative* self) {
 					tileSetData->tileHeight,
 				},
 				(Rectangle){
-					position.x + i * tileSetData->tileWidth * scale.x,
-					position.y + j * tileSetData->tileHeight * scale.y,
-					tileSetData->tileWidth * scale.x,
-					tileSetData->tileHeight * scale.y,
+					(TOY_VALUE_AS_FLOAT(posX) - cameraData.offsetX + i * tileSetData->tileWidth) * cameraData.scaleX,
+					(TOY_VALUE_AS_FLOAT(posY) - cameraData.offsetY + j * tileSetData->tileHeight) * cameraData.scaleY,
+					tileSetData->tileWidth * cameraData.scaleX,
+					tileSetData->tileHeight * cameraData.scaleY,
 				},
 				(Vector2){0,0}, //top-left
 				0,

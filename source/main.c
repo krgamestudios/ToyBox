@@ -10,6 +10,7 @@
 
 #include "keyboard.h"
 #include "mouse.h"
+#include "camera.h"
 #include "actor.h"
 #include "tile_grid.h"
 
@@ -314,6 +315,9 @@ Toy_Value dispatchOpaqueAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value att
 		case OPAQUE_MOUSE_RELEASED:
 			return handleMouseAttributes(vm, compound, attribute);
 
+		case OPAQUE_CAMERA:
+			return handleCameraAttributes(vm, compound, attribute);
+
 		case OPAQUE_SPRITE_DATA:
 			return handleSpriteAttributes(vm, compound, attribute);
 
@@ -374,6 +378,8 @@ void initGameAPI(Toy_VM* vm) {
 	DECLARE_OPAQUE("Mouse", &mouseData, vm->scope, &vm->memoryBucket);
 	DECLARE_OPAQUE("MousePressed", &mousePressedData, vm->scope, &vm->memoryBucket);
 	DECLARE_OPAQUE("MouseReleased", &mouseReleasedData, vm->scope, &vm->memoryBucket);
+
+	DECLARE_OPAQUE("Camera", &cameraData, vm->scope, &vm->memoryBucket);
 
 	//opaque APIs
 	initActorAPI(vm);
