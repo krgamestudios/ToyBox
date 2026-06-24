@@ -21,5 +21,4 @@ cd build && sudo make install
 Contributions via the [GitHub mirror](https://github.com/krgamestudios/ToyBox) are welcome, but absolutely no AI contributions will be accepted.
 
 Suyash Dwivedi - "No AI" logo [via wikimedia, CC BY-SA 4.0](https://commons.wikimedia.org/w/index.php?curid=165477595)  
-LogicMonkey - Multiple sprites  
-[IvoryRed](https://ivoryred.itch.io/pixel-poker-cards) - pixelcards.png [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)  
+LogicMonkey - Multiple Sprites  
