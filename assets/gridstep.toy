@@ -49,17 +49,17 @@ fn makePlayerCharacter(spriteName: String, spawnX: Int, spawnY: Int, tileWidth: 
 		if (playerGridX * tileWidth != playerRef.x) {
 			var dir = sign(playerGridX * tileWidth - playerRef.x);
 			playerRef.setX(playerRef.x + dir * 2);
-			playerRef.setAnimationState(playerFacing .. "-walk");
+			playerRef.setAnimationState(playerFacing .. "-walk", 2);
 		}
 
 		else if (playerGridY * tileHeight != playerRef.y) {
 			var dir = sign(playerGridY * tileHeight - playerRef.y);
 			playerRef.setY(playerRef.y + dir * 2);
-			playerRef.setAnimationState(playerFacing .. "-walk");
+			playerRef.setAnimationState(playerFacing .. "-walk", 2);
 		}
 
 		else {
-			playerRef.setAnimationState(playerFacing .. "-idle");
+			playerRef.setAnimationState(playerFacing .. "-idle", 2);
 		}
 	}
 
@@ -87,7 +87,7 @@ fn makePlayerCharacter(spriteName: String, spawnX: Int, spawnY: Int, tileWidth: 
 
 	//finally, spawn the player's actor
 	playerRef = SpawnActorAt(playerGridX * tileWidth, playerGridY * tileHeight, playerSprite, playerOnFrame);
-	playerRef.setAnimationState("south-idle");
+	playerRef.setAnimationState("south-idle", 2);
 	return playerRef;
 }
 
@@ -107,7 +107,7 @@ fn makeDrone(sprite: Opaque, spawnX: Int, spawnY: Int, tileWidth: Int, tileHeigh
 
 	//finally, spawn the actor
 	actorRef = SpawnActorAt(gridX * tileWidth, gridY * tileHeight, sprite, onFrame);
-	actorRef.setAnimationState("south");
+	actorRef.setAnimationState("south", 10);
 	return actorRef;
 }
 
@@ -121,7 +121,7 @@ makePlayerCharacter("assets/parvati.png", 0, 0, 32, 32);
 
 //load the drone sprite
 var sprite = LoadSprite("assets/drone.png", 32, 32);
-sprite.addAnimationState("south", 0, 2); //TODO: add animation speed for each state
+sprite.addAnimationState("south", 0, 2);
 sprite.addAnimationState("north", 1, 2);
 sprite.addAnimationState("east", 2, 2);
 sprite.addAnimationState("west", 3, 2);

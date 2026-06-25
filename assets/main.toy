@@ -84,10 +84,10 @@ fn makePlayerCharacter(spriteName: String, spriteWidth: Int, spriteHeight: Int, 
 		player.setY(player.y + floor(playerMotionY * mod));
 
 		if (playerMotionX != 0 || playerMotionY != 0) {
-			player.setAnimationState(facing .. "-walk");
+			player.setAnimationState(facing .. "-walk", 2);
 		}
 		else {
-			player.setAnimationState(facing .. "-idle");
+			player.setAnimationState(facing .. "-idle", 2);
 		}
 	}
 
@@ -113,7 +113,7 @@ fn makePlayerCharacter(spriteName: String, spriteWidth: Int, spriteHeight: Int, 
 
 	//spawn the player actor
 	playerRef = SpawnActorAt(spawnX, spawnY, playerSprite, playerOnFrame);
-	playerRef.setAnimationState("south-idle");
+	playerRef.setAnimationState("south-idle", 2);
 	return playerRef;
 }
 

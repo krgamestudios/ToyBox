@@ -28,7 +28,8 @@ typedef struct ActorData {
 
 	SpriteData* spriteData;
 	SpriteState* spriteState;
-	unsigned int currentFrame;
+	unsigned int spriteFrameTick;
+	unsigned int spriteFrameDuration;
 
 	Vector2 position;
 

@@ -19,6 +19,14 @@ CameraData cameraData = {
 static void attr_cameraSetOffsetX(Toy_VM* vm, Toy_FunctionNative* self) {
 	(void)self;
 
+	//check parameter count
+	if (vm->stack->count < 2) {
+		char buffer[256];
+		snprintf(buffer, 256, "Not enough parameters found in 'CameraData.setOffsetX()'");
+		Toy_error(buffer);
+		return;
+	}
+
 	Toy_Value compound = Toy_popStack(&vm->stack);
 	Toy_Value x = Toy_popStack(&vm->stack);
 
@@ -43,6 +51,14 @@ static void attr_cameraSetOffsetX(Toy_VM* vm, Toy_FunctionNative* self) {
 
 static void attr_cameraSetOffsetY(Toy_VM* vm, Toy_FunctionNative* self) {
 	(void)self;
+
+	//check parameter count
+	if (vm->stack->count < 2) {
+		char buffer[256];
+		snprintf(buffer, 256, "Not enough parameters found in 'CameraData.setOffsetY()'");
+		Toy_error(buffer);
+		return;
+	}
 
 	Toy_Value compound = Toy_popStack(&vm->stack);
 	Toy_Value y = Toy_popStack(&vm->stack);
@@ -69,6 +85,14 @@ static void attr_cameraSetOffsetY(Toy_VM* vm, Toy_FunctionNative* self) {
 static void attr_cameraSetScaleX(Toy_VM* vm, Toy_FunctionNative* self) {
 	(void)self;
 
+	//check parameter count
+	if (vm->stack->count < 2) {
+		char buffer[256];
+		snprintf(buffer, 256, "Not enough parameters found in 'CameraData.setScaleX()'");
+		Toy_error(buffer);
+		return;
+	}
+
 	Toy_Value compound = Toy_popStack(&vm->stack);
 	Toy_Value x = Toy_popStack(&vm->stack);
 
@@ -93,6 +117,14 @@ static void attr_cameraSetScaleX(Toy_VM* vm, Toy_FunctionNative* self) {
 
 static void attr_cameraSetScaleY(Toy_VM* vm, Toy_FunctionNative* self) {
 	(void)self;
+
+	//check parameter count
+	if (vm->stack->count < 2) {
+		char buffer[256];
+		snprintf(buffer, 256, "Not enough parameters found in 'CameraData.setScaleY()'");
+		Toy_error(buffer);
+		return;
+	}
 
 	Toy_Value compound = Toy_popStack(&vm->stack);
 	Toy_Value y = Toy_popStack(&vm->stack);

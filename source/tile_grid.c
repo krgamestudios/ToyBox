@@ -21,9 +21,10 @@ static void api_loadTileSet(Toy_VM* vm, Toy_FunctionNative* self) {
 		return;
 	}
 
+	//check parameter count
 	if (vm->stack->count < 3) {
 		char buffer[256];
-		snprintf(buffer, 256, "Not enough parameters found in 'loadTileSet'");
+		snprintf(buffer, 256, "Not enough parameters found in 'LoadTileSet()'");
 		Toy_error(buffer);
 		return;
 	}
@@ -35,7 +36,7 @@ static void api_loadTileSet(Toy_VM* vm, Toy_FunctionNative* self) {
 	//check types
 	if (!TOY_VALUE_IS_STRING(file) || !TOY_VALUE_IS_INTEGER(tileWidth) || !TOY_VALUE_IS_INTEGER(tileHeight)) {
 		char buffer[256];
-		snprintf(buffer, 256, "Bad parameter types found in 'loadTileSet'");
+		snprintf(buffer, 256, "Bad parameter types found in 'LoadTileSet'");
 		Toy_error(buffer);
 		Toy_freeValue(file);
 		Toy_freeValue(tileWidth);
@@ -72,13 +73,21 @@ void api_createTileGrid(Toy_VM* vm, Toy_FunctionNative* self) {
 	//width, height, initial state -> Opaque(TileGrid)
 	(void)self;
 
+	//check parameter count
+	if (vm->stack->count < 3) {
+		char buffer[256];
+		snprintf(buffer, 256, "Not enough parameters found in 'CreateTileGrid()'");
+		Toy_error(buffer);
+		return;
+	}
+
 	Toy_Value initial = Toy_popStack(&vm->stack);
 	Toy_Value height = Toy_popStack(&vm->stack);
 	Toy_Value width = Toy_popStack(&vm->stack);
 
 	if (!TOY_VALUE_IS_INTEGER(width) || !TOY_VALUE_IS_INTEGER(height)) {
 		char buffer[256];
-		sprintf(buffer, "Bad argument types found in 'createTileGrid' (width & height)");
+		sprintf(buffer, "Bad argument types found in 'CreateTileGrid()', width & height");
 		Toy_error(buffer);
 		Toy_pushStack(&vm->stack, TOY_VALUE_FROM_NULL());
 		return;
@@ -86,7 +95,7 @@ void api_createTileGrid(Toy_VM* vm, Toy_FunctionNative* self) {
 
 	if (!TOY_VALUE_IS_ARRAY(initial) && !TOY_VALUE_IS_NULL(initial)) {
 		char buffer[256];
-		sprintf(buffer, "Bad argument types found in 'createTileGrid' (initial array)");
+		sprintf(buffer, "Bad argument types found in 'CreateTileGrid()', initial array");
 		Toy_error(buffer);
 		Toy_pushStack(&vm->stack, TOY_VALUE_FROM_NULL());
 		return;
@@ -94,7 +103,7 @@ void api_createTileGrid(Toy_VM* vm, Toy_FunctionNative* self) {
 
 	if (TOY_VALUE_AS_INTEGER(width) <= 0 || TOY_VALUE_AS_INTEGER(height) <= 0) {
 		char buffer[256];
-		sprintf(buffer, "Bad argument values found in 'createTileGrid' ('width' & 'height' must be greater than '0')");
+		sprintf(buffer, "Bad argument values found in 'CreateTileGrid()', 'width' & 'height' must be greater than '0'");
 		Toy_error(buffer);
 		Toy_pushStack(&vm->stack, TOY_VALUE_FROM_NULL());
 		return;
@@ -126,7 +135,7 @@ void api_createTileGrid(Toy_VM* vm, Toy_FunctionNative* self) {
 
 	if (array->count != tileGridData->width*tileGridData->height) {
 		char buffer[256];
-		sprintf(buffer, "Array 'initial' found in 'createTileGrid' has the wrong number of elements; Expecte a 1d array of %u elements, found %u elements instead", tileGridData->width*tileGridData->height, array->count);
+		sprintf(buffer, "Array 'initial' found in 'CreateTileGrid()' has the wrong number of elements, Expected a 1d array of %u elements, found %u elements instead", tileGridData->width*tileGridData->height, array->count);
 		Toy_error(buffer);
 		Toy_pushStack(&vm->stack, TOY_OPAQUE_FROM_POINTER(tileGridData));
 		Toy_freeValue(width);
@@ -138,7 +147,7 @@ void api_createTileGrid(Toy_VM* vm, Toy_FunctionNative* self) {
 	for (unsigned int i = 0; i < tileGridData->width*tileGridData->height; i++) {
 		if (!TOY_VALUE_IS_INTEGER(array->data[i]) || TOY_VALUE_AS_INTEGER(array->data[i]) < 0) {
 			char buffer[256];
-			sprintf(buffer, "An element at index %u in the array 'initial' found in 'createTileGrid' is not an integer greater than or equal to '0' (tile ignored)", i);
+			sprintf(buffer, "An element at index %u in the array 'initial' found in 'CreateTileGrid()' is not an integer greater than or equal to '0' (tile ignored)", i);
 			Toy_error(buffer);
 			continue;
 		}
@@ -188,6 +197,14 @@ void initTileGridAPI(Toy_VM* vm) {
 static void attr_tileSetUnload(Toy_VM* vm, Toy_FunctionNative* self) {
 	(void)self;
 
+	//check parameter count
+	if (vm->stack->count < 1) {
+		char buffer[256];
+		snprintf(buffer, 256, "Not enough parameters found in 'TileSetData.unload()'");
+		Toy_error(buffer);
+		return;
+	}
+
 	Toy_Value compound = Toy_popStack(&vm->stack);
 	TileSetData* tileSetData = (TileSetData*)TOY_VALUE_AS_OPAQUE(compound);
 
@@ -230,6 +247,14 @@ Toy_Value handleTileSetAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attr
 static void attr_tileGridSetTile(Toy_VM* vm, Toy_FunctionNative* self) {
 	(void)self;
 
+	//check parameter count
+	if (vm->stack->count < 4) {
+		char buffer[256];
+		snprintf(buffer, 256, "Not enough parameters found in 'TileGridData.setTile()'");
+		Toy_error(buffer);
+		return;
+	}
+
 	Toy_Value compound = Toy_popStack(&vm->stack);
 	Toy_Value value = Toy_popStack(&vm->stack);
 	Toy_Value y = Toy_popStack(&vm->stack);
@@ -240,7 +265,7 @@ static void attr_tileGridSetTile(Toy_VM* vm, Toy_FunctionNative* self) {
 	//types
 	if (!TOY_VALUE_IS_INTEGER(x) || !TOY_VALUE_IS_INTEGER(y) || !TOY_VALUE_IS_INTEGER(value)) {
 		char buffer[256];
-		snprintf(buffer, 256, "Bad types found in 'TileGrid.setTile()'");
+		snprintf(buffer, 256, "Bad types found in 'TileGridData.setTile()'");
 		Toy_error(buffer);
 		Toy_pushStack(&vm->stack, TOY_VALUE_FROM_NULL());
 		return;
@@ -249,7 +274,7 @@ static void attr_tileGridSetTile(Toy_VM* vm, Toy_FunctionNative* self) {
 	//value bounds
 	if (TOY_VALUE_AS_INTEGER(x) < 0 || TOY_VALUE_AS_INTEGER(y) < 0 || (unsigned int)TOY_VALUE_AS_INTEGER(x) >= tileGridData->width || (unsigned int)TOY_VALUE_AS_INTEGER(y) >= tileGridData->height) {
 		char buffer[256];
-		snprintf(buffer, 256, "Tile coordinates (%d, %d) out of bounds in 'TileGrid.setTile()'", TOY_VALUE_AS_INTEGER(x), TOY_VALUE_AS_INTEGER(y));
+		snprintf(buffer, 256, "Tile coordinates (%d, %d) out of bounds in 'TileGridData.setTile()'", TOY_VALUE_AS_INTEGER(x), TOY_VALUE_AS_INTEGER(y));
 		Toy_error(buffer);
 		Toy_pushStack(&vm->stack, TOY_VALUE_FROM_NULL());
 		return;
@@ -257,7 +282,7 @@ static void attr_tileGridSetTile(Toy_VM* vm, Toy_FunctionNative* self) {
 
 	if (!TOY_VALUE_IS_INTEGER(value) || TOY_VALUE_AS_INTEGER(value) < 0) {
 			char buffer[256];
-			sprintf(buffer, "Tile value found in 'TileGrid.setTile()' is not an integer greater than or equal to '0'");
+			sprintf(buffer, "Tile value found in 'TileGridData.setTile()' is not an integer greater than or equal to '0'");
 			Toy_error(buffer);
 			Toy_pushStack(&vm->stack, TOY_VALUE_FROM_NULL());
 			return;
@@ -276,6 +301,14 @@ static void attr_tileGridSetTile(Toy_VM* vm, Toy_FunctionNative* self) {
 static void attr_tileGridGetTile(Toy_VM* vm, Toy_FunctionNative* self) {
 	(void)self;
 
+	//check parameter count
+	if (vm->stack->count < 3) {
+		char buffer[256];
+		snprintf(buffer, 256, "Not enough parameters found in 'TileGridData.getTile()'");
+		Toy_error(buffer);
+		return;
+	}
+
 	Toy_Value compound = Toy_popStack(&vm->stack); //the grid is always on top here
 	Toy_Value y = Toy_popStack(&vm->stack);
 	Toy_Value x = Toy_popStack(&vm->stack);
@@ -285,7 +318,7 @@ static void attr_tileGridGetTile(Toy_VM* vm, Toy_FunctionNative* self) {
 	//types
 	if (!TOY_VALUE_IS_INTEGER(x) || !TOY_VALUE_IS_INTEGER(y)) {
 		char buffer[256];
-		snprintf(buffer, 256, "Bad types found in 'TileGrid.getTile()'");
+		snprintf(buffer, 256, "Bad types found in 'TileGridData.getTile()'");
 		Toy_error(buffer);
 		Toy_pushStack(&vm->stack, TOY_VALUE_FROM_NULL());
 		return;
@@ -294,7 +327,7 @@ static void attr_tileGridGetTile(Toy_VM* vm, Toy_FunctionNative* self) {
 	//value bounds
 	if (TOY_VALUE_AS_INTEGER(x) < 0 || TOY_VALUE_AS_INTEGER(y) < 0 || (unsigned int)TOY_VALUE_AS_INTEGER(x) >= tileGridData->width || (unsigned int)TOY_VALUE_AS_INTEGER(y) >= tileGridData->height) {
 		char buffer[256];
-		snprintf(buffer, 256, "Tile coordinates (%d, %d) out of bounds in 'TileGrid.getTile()'", TOY_VALUE_AS_INTEGER(x), TOY_VALUE_AS_INTEGER(y));
+		snprintf(buffer, 256, "Tile coordinates (%d, %d) out of bounds in 'TileGridData.getTile()'", TOY_VALUE_AS_INTEGER(x), TOY_VALUE_AS_INTEGER(y));
 		Toy_error(buffer);
 		Toy_pushStack(&vm->stack, TOY_VALUE_FROM_NULL());
 		return;
@@ -314,6 +347,14 @@ static void attr_tileGridGetTile(Toy_VM* vm, Toy_FunctionNative* self) {
 static void attr_tileGridDrawToScreen(Toy_VM* vm, Toy_FunctionNative* self) {
 	(void)self;
 
+	//check parameter count
+	if (vm->stack->count < 4) {
+		char buffer[256];
+		snprintf(buffer, 256, "Not enough parameters found in 'TileGridData.drawToScreen()'");
+		Toy_error(buffer);
+		return;
+	}
+
 	Toy_Value tileGridValue = Toy_popStack(&vm->stack);
 	Toy_Value tileSetValue = Toy_popStack(&vm->stack);
 	Toy_Value posY = Toy_popStack(&vm->stack);
@@ -326,7 +367,7 @@ static void attr_tileGridDrawToScreen(Toy_VM* vm, Toy_FunctionNative* self) {
 	//types
 	if (!TOY_VALUE_IS_FLOAT(posX) || !TOY_VALUE_IS_FLOAT(posY) || !TOY_VALUE_IS_OPAQUE(tileSetValue)) {
 		char buffer[256];
-		snprintf(buffer, 256, "Bad types found in 'TileGrid.drawToScreen()'");
+		snprintf(buffer, 256, "Bad types found in 'TileGridData.drawToScreen()'");
 		Toy_error(buffer);
 		Toy_freeValue(tileGridValue);
 		Toy_freeValue(posX);
@@ -374,6 +415,14 @@ static void attr_tileGridDrawToScreen(Toy_VM* vm, Toy_FunctionNative* self) {
 
 static void attr_tileGridUnload(Toy_VM* vm, Toy_FunctionNative* self) {
 	(void)self;
+
+	//check parameter count
+	if (vm->stack->count < 1) {
+		char buffer[256];
+		snprintf(buffer, 256, "Not enough parameters found in 'TileGridData.unload()'");
+		Toy_error(buffer);
+		return;
+	}
 
 	Toy_Value compound = Toy_popStack(&vm->stack);
 	TileGridData* tileGridData = (TileGridData*)TOY_VALUE_AS_OPAQUE(compound);

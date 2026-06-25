@@ -194,7 +194,9 @@ static void api_spawnActorAt(Toy_VM* vm, Toy_FunctionNative* self) {
 		.type = OPAQUE_ACTOR_DATA,
 		.spriteData = (SpriteData*)(TOY_VALUE_AS_OPAQUE(sprite)),
 		.spriteState = NULL,
-		.currentFrame = 0,
+		.spriteFrameTick = 0,
+		.spriteFrameDuration = 0,
+
 		.position = { TOY_VALUE_AS_FLOAT(xpos), TOY_VALUE_AS_FLOAT(ypos) },
 		.onStep = onStep,
 	};
@@ -214,7 +216,7 @@ typedef struct CallbackPairs {
 	Toy_nativeCallback callback;
 } CallbackPairs;
 
-//URGENT: No "unload" is currently implemented (for sprites)
+//WARN: No "unload" is currently implemented for sprites
 static CallbackPairs callbackPairs[] = {
 	{"LoadSprite", api_loadSprite},
 	{"SpawnActorAt", api_spawnActorAt},
@@ -352,12 +354,21 @@ void drawActors(Toy_VM* vm) {
 			continue;
 		}
 
+		//set up sprite state values if needed (avoiding an extra division if able)
+		unsigned int stripIndex = 0;
+		unsigned int currentFrame = 0;
+
+		if (actor->spriteState != NULL) {
+			stripIndex = actor->spriteState->stripIndex;
+			currentFrame = actor->spriteFrameTick / actor->spriteFrameDuration;
+		}
+
 		//Texture2D texture, Rectangle source, Rectangle dest, Vector2 origin, float rotation, Color tint
 		DrawTexturePro(
 			actor->spriteData->texture,
 			(Rectangle){
-				actor->spriteData->rect.x + actor->currentFrame * actor->spriteData->rect.width,
-				actor->spriteData->rect.y + (actor->spriteState != NULL ? actor->spriteState->stripIndex : 0) * actor->spriteData->rect.height,
+				actor->spriteData->rect.x + currentFrame * actor->spriteData->rect.width,
+				actor->spriteData->rect.y + stripIndex * actor->spriteData->rect.height,
 				actor->spriteData->rect.width,
 				actor->spriteData->rect.height,
 			},
@@ -372,9 +383,9 @@ void drawActors(Toy_VM* vm) {
 			WHITE
 		);
 
-		//increment the currentFrame
+		//increment the animation frame
 		if (actor->spriteState != NULL) {
-			actor->currentFrame = (actor->currentFrame + 1) % actor->spriteState->frameCount;
+			actor->spriteFrameTick = (actor->spriteFrameTick + 1) % (actor->spriteFrameDuration * actor->spriteState->frameCount);
 		}
 	}
 }
@@ -383,6 +394,14 @@ void drawActors(Toy_VM* vm) {
 static void attr_spriteAddAnimationState(Toy_VM* vm, Toy_FunctionNative* self) {
 	//sprite, anim-key, strip index, frame count
 	(void)self;
+
+	//check parameter count
+	if (vm->stack->count < 4) {
+		char buffer[256];
+		snprintf(buffer, 256, "Not enough parameters found in 'SpriteData.addAnimationState()'");
+		Toy_error(buffer);
+		return;
+	}
 
 	Toy_Value compound = Toy_popStack(&vm->stack);
 	Toy_Value frameCount = Toy_popStack(&vm->stack);
@@ -454,6 +473,14 @@ Toy_Value handleSpriteAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attri
 static void attr_actorSetX(Toy_VM* vm, Toy_FunctionNative* self) {
 	(void)self;
 
+	//check parameter count
+	if (vm->stack->count < 2) {
+		char buffer[256];
+		snprintf(buffer, 256, "Not enough parameters found in 'ActorData.setX()'");
+		Toy_error(buffer);
+		return;
+	}
+
 	Toy_Value compound = Toy_popStack(&vm->stack);
 	Toy_Value x = Toy_popStack(&vm->stack);
 
@@ -479,6 +506,14 @@ static void attr_actorSetX(Toy_VM* vm, Toy_FunctionNative* self) {
 static void attr_actorSetY(Toy_VM* vm, Toy_FunctionNative* self) {
 	(void)self;
 
+	//check parameter count
+	if (vm->stack->count < 2) {
+		char buffer[256];
+		snprintf(buffer, 256, "Not enough parameters found in 'ActorData.setY()'");
+		Toy_error(buffer);
+		return;
+	}
+
 	Toy_Value compound = Toy_popStack(&vm->stack);
 	Toy_Value y = Toy_popStack(&vm->stack);
 
@@ -503,15 +538,25 @@ static void attr_actorSetY(Toy_VM* vm, Toy_FunctionNative* self) {
 static void attr_actorSetAnimationState(Toy_VM* vm, Toy_FunctionNative* self) {
 	(void)self;
 
+	//check parameter count
+	if (vm->stack->count < 3) {
+		char buffer[256];
+		snprintf(buffer, 256, "Not enough parameters found in 'ActorData.setAnimationState()'");
+		Toy_error(buffer);
+		return;
+	}
+
 	Toy_Value compound = Toy_popStack(&vm->stack);
+	Toy_Value duration = Toy_popStack(&vm->stack);
 	Toy_Value key = Toy_popStack(&vm->stack);
 
-	if (!TOY_VALUE_IS_STRING(key)) {
+	if (!TOY_VALUE_IS_STRING(key) || !TOY_VALUE_IS_INTEGER(duration)) {
 		char buffer[256];
-		snprintf(buffer, 256, "Bad argument type in ActorData.setSpriteState() (expected 'String', found '%s')", Toy_getValueTypeAsCString(key.type));
+		snprintf(buffer, 256, "Bad argument type in ActorData.setSpriteState() (expected 'String' and 'Int', found '%s' and '%s')", Toy_getValueTypeAsCString(key.type), Toy_getValueTypeAsCString(duration.type));
 		Toy_error(buffer);
 		Toy_freeValue(compound);
 		Toy_freeValue(key);
+		Toy_freeValue(duration);
 		return;
 	}
 
@@ -525,6 +570,7 @@ static void attr_actorSetAnimationState(Toy_VM* vm, Toy_FunctionNative* self) {
 		Toy_error(buffer);
 		Toy_freeValue(compound);
 		Toy_freeValue(key);
+		Toy_freeValue(duration);
 		return;
 	}
 
@@ -549,13 +595,26 @@ static void attr_actorSetAnimationState(Toy_VM* vm, Toy_FunctionNative* self) {
 		}
 		Toy_freeValue(compound);
 		Toy_freeValue(key);
+		Toy_freeValue(duration);
+		return;
+	}
+
+	if (TOY_VALUE_AS_INTEGER(duration) <= 0) {
+		char buffer[256];
+		snprintf(buffer, 256, "Animation state duration must be greater than 0, found '%d'", TOY_VALUE_AS_INTEGER(duration));
+		Toy_error(buffer);
+
+		Toy_freeValue(compound);
+		Toy_freeValue(key);
+		Toy_freeValue(duration);
 		return;
 	}
 
 	//finally, set the state and reset the current frame, but ONLY if the state has actually been changed
 	if (actor->spriteState != (SpriteState*)TOY_VALUE_AS_OPAQUE(stateValue)) {
 		actor->spriteState = (SpriteState*)TOY_VALUE_AS_OPAQUE(stateValue);
-		actor->currentFrame = 0;
+		actor->spriteFrameTick = 0;
+		actor->spriteFrameDuration = (unsigned int)TOY_VALUE_AS_INTEGER(duration);
 	}
 
 	Toy_freeValue(compound);
@@ -564,6 +623,14 @@ static void attr_actorSetAnimationState(Toy_VM* vm, Toy_FunctionNative* self) {
 
 static void attr_actorDespawn(Toy_VM* vm, Toy_FunctionNative* self) {
 	(void)self;
+
+	//check parameter count
+	if (vm->stack->count < 1) {
+		char buffer[256];
+		snprintf(buffer, 256, "Not enough parameters found in 'ActorData.despawn()'");
+		Toy_error(buffer);
+		return;
+	}
 
 	Toy_Value compound = Toy_popStack(&vm->stack); //compound is (presumably) a reference
 

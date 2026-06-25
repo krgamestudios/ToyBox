@@ -73,10 +73,10 @@ fn playerOnFrame(player: Opaque) {
 	player.setY(player.y + floor(playerMotionY * mod));
 
 	if (playerMotionX != 0 || playerMotionY != 0) {
-		player.setAnimationState(facing .. "-walk");
+		player.setAnimationState(facing .. "-walk", 2);
 	}
 	else {
-		player.setAnimationState(facing .. "-idle");
+		player.setAnimationState(facing .. "-idle", 2);
 	}
 }
 
@@ -111,7 +111,7 @@ fn onReady() {
 	playerSprite.addAnimationState("west-walk", 10, 3);
 	playerSprite.addAnimationState("west-kick", 11, 2);
 
-	playerRef.setAnimationState("south-idle");
+	playerRef.setAnimationState("south-idle", 2);
 }
 
 //fn onFrame() {
