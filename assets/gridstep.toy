@@ -1,5 +1,31 @@
-//NOTE: player moves in a grid-like pattern
-fn makePlayerCharacter(spriteName: String, spawnX: Int, spawnY: Int, tileWidth: Int, tileHeight: Int) {
+//the game world
+fn makeTileMap() {
+	fn rng() {
+		return rand() % 4 + 4;
+	}
+
+	//WARN: this is bugged, my brain is fried
+	var initial: Array = [
+		12, 8, 8, 8, 8, 8, 8, 8, 8, 13,
+		10, rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), 11,
+		10, rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), 11,
+		10, rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), 11,
+		10, rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), 11,
+		10, rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), 11,
+		10, rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), 11,
+		10, rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), 11,
+		10, rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), 11,
+		14, 9, 9, 9, 9, 9, 9, 9, 9, 15,
+	];
+
+	print rng();
+
+	//TODO: separate this from the collision map
+	return CreateTileMap(10, 10, initial);
+}
+
+//player moves in a grid-like pattern
+fn makePlayerCharacter(spriteName: String, spriteWidth: Int, spriteHeight: Int, spawnX: Int, spawnY: Int, tileWidth: Int, tileHeight: Int) {
 	//simple player components
 	var playerRef: Opaque = null;
 
@@ -36,23 +62,23 @@ fn makePlayerCharacter(spriteName: String, spawnX: Int, spawnY: Int, tileWidth: 
 		//if grid location doesn't match actual location, move to correct grid location
 		if (playerGridX * tileWidth != playerRef.x) {
 			var dir = sign(playerGridX * tileWidth - playerRef.x);
-			playerRef.setX(playerRef.x + dir * 2);
-			playerRef.setAnimationState(playerFacing .. "-walk", 2);
+			playerRef.setX(playerRef.x + dir * 1);
+			playerRef.setAnimationState(playerFacing .. "-walk", 8);
 		}
 
 		else if (playerGridY * tileHeight != playerRef.y) {
 			var dir = sign(playerGridY * tileHeight - playerRef.y);
-			playerRef.setY(playerRef.y + dir * 2);
-			playerRef.setAnimationState(playerFacing .. "-walk", 2);
+			playerRef.setY(playerRef.y + dir * 1);
+			playerRef.setAnimationState(playerFacing .. "-walk", 8);
 		}
 
 		else {
-			playerRef.setAnimationState(playerFacing .. "-idle", 2);
+			playerRef.setAnimationState(playerFacing .. "-idle", 8);
 		}
 	}
 
 	//load the player's sprite
-	var playerSprite = LoadSprite(spriteName, tileWidth, tileHeight);
+	var playerSprite = LoadSprite(spriteName, spriteWidth, spriteHeight);
 
 	//BUG: loading a second parvati sprite would cause the calls to `addAnimationState` to output an error
 
@@ -79,6 +105,7 @@ fn makePlayerCharacter(spriteName: String, spawnX: Int, spawnY: Int, tileWidth: 
 	return playerRef;
 }
 
+//only move when the player does
 fn makeDrone(sprite: Opaque, spawnX: Int, spawnY: Int, tileWidth: Int, tileHeight: Int) {
 	//simple components
 	var actorRef: Opaque = null;
@@ -99,23 +126,46 @@ fn makeDrone(sprite: Opaque, spawnX: Int, spawnY: Int, tileWidth: Int, tileHeigh
 	return actorRef;
 }
 
-//Grid movement
+//start
 InitScreen(1280, 720, "Welcome to the Grid");
-Camera.setScaleX(2);
-Camera.setScaleY(2);
-//InitLoop(onReady, onFrame, onClose);
 
-makePlayerCharacter("assets/parvati.png", 0, 0, 32, 32);
+fn onReady() {
+	Camera.setOffsetX(-64);
+	Camera.setOffsetY(-64);
+	Camera.setScaleX(2);
+	Camera.setScaleY(2);
 
-//load the drone sprite
-var sprite = LoadSprite("assets/drone.png", 32, 32);
-sprite.addAnimationState("south", 0, 2);
-sprite.addAnimationState("north", 1, 2);
-sprite.addAnimationState("east", 2, 2);
-sprite.addAnimationState("west", 3, 2);
+	//map stuff should go here
 
-//make drones
-makeDrone(sprite, 4, 4, 32, 32);
-makeDrone(sprite, 6, 4, 32, 32);
-makeDrone(sprite, 4, 6, 32, 32);
-makeDrone(sprite, 6, 6, 32, 32);
+	//load the player character
+	makePlayerCharacter("assets/parvati.png", 32, 32, 0, 0, 16, 16);
+
+	//load the drones
+	var droneSprite = LoadSprite("assets/drone.png", 32, 32);
+	droneSprite.addAnimationState("south", 0, 2);
+	droneSprite.addAnimationState("north", 1, 2);
+	droneSprite.addAnimationState("east", 2, 2);
+	droneSprite.addAnimationState("west", 3, 2);
+
+	//make drones
+	makeDrone(droneSprite, 4, 4, 16, 16);
+	makeDrone(droneSprite, 6, 4, 16, 16);
+	makeDrone(droneSprite, 4, 6, 16, 16);
+	makeDrone(droneSprite, 9, 9, 16, 16);
+}
+
+//WARN: awkward spot
+var tileset = LoadTileSet("assets/dungeontiles.png", 16, 16);
+var tileMap = makeTileMap();
+
+fn onFrame() {
+	//offset caused by parvati's sprite layout
+	tileMap.drawToScreen(8, 16, tileset);
+}
+
+fn onClose() {
+	//
+}
+
+//set the loop calls
+InitLoop(onReady, onFrame, onClose); //TODO: is this redundant?
