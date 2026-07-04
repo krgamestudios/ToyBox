@@ -1,9 +1,3 @@
-//quick and dirty RNG
-var randi: Int = 69420;
-fn rand() {
-	return randi = randi * 1664525 + 1013904223; //overflows to a negative, which is fine
-}
-
 //wander like a zombie
 var counter = 0;
 fn wander(actor: Opaque) {
