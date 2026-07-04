@@ -12,7 +12,7 @@
 #include "mouse.h"
 #include "camera.h"
 #include "actor.h"
-#include "tile_grid.h"
+#include "tile_map.h"
 
 #include "standard_library.h"
 
@@ -328,8 +328,8 @@ Toy_Value dispatchOpaqueAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value att
 		case OPAQUE_TILE_SET:
 			return handleTileSetAttributes(vm, compound, attribute);
 
-		case OPAQUE_TILE_GRID:
-			return handleTileGridAttributes(vm, compound, attribute);
+		case OPAQUE_TILE_MAP:
+			return handleTileMapAttributes(vm, compound, attribute);
 	}
 
 	//only reached on error
@@ -384,7 +384,7 @@ void initGameAPI(Toy_VM* vm) {
 
 	//opaque APIs
 	initActorAPI(vm);
-	initTileGridAPI(vm);
+	initTileMapAPI(vm);
 }
 
 //main file

@@ -16,5 +16,5 @@ typedef enum OpaqueType {
 	OPAQUE_ACTOR_DATA,
 
 	OPAQUE_TILE_SET,
-	OPAQUE_TILE_GRID,
+	OPAQUE_TILE_MAP,
 } OpaqueType;

@@ -11,11 +11,11 @@ var defaultMap: Array = [
 	14, 9, 9, 9, 15,
 ];
 
-var grid: Opaque;
+var map: Opaque;
 var dungeonTiles: Opaque;
 
 fn onReady() {
-	grid = CreateTileGrid(5, 10, defaultMap);
+	map = CreateTileMap(5, 10, defaultMap);
 	dungeonTiles = LoadTileSet("assets/dungeontiles.png", 16, 16);
 
 	Camera.setOffsetX(-100);
@@ -25,11 +25,11 @@ fn onReady() {
 }
 
 fn onFrame() {
-	grid.drawToScreen(0, 0, dungeonTiles);
+	map.drawToScreen(0, 0, dungeonTiles);
 }
 
 fn onClose() {
-	grid.unload();
+	map.unload();
 	dungeonTiles.unload();
 }
 

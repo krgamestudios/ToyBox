@@ -11,15 +11,15 @@ typedef struct TileSetData {
 	unsigned int tileHeight;
 } TileSetData;
 
-typedef struct TileGridData {
+typedef struct TileMapData {
 	OpaqueType type;
 	unsigned int width;
 	unsigned int height;
 	unsigned int *cells;
-} TileGridData;
+} TileMapData;
 
-void initTileGridAPI(Toy_VM* vm);
-// void freeTileGridAPI(Toy_VM* vm);
+void initTileMapAPI(Toy_VM* vm);
+// void freeTileMapAPI(Toy_VM* vm);
 
 Toy_Value handleTileSetAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attribute);
-Toy_Value handleTileGridAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attribute);
+Toy_Value handleTileMapAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attribute);
