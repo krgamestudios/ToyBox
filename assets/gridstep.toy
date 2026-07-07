@@ -1,27 +1,36 @@
 //the game world
 fn makeTileMap() {
 	fn rng() {
-		return abs(rand()) % 4 + 4;
+		return abs(rand()) % 5 % 4 + 4;
 	}
 
-	//WARN: this is bugged, my brain is fried
 	var initial: Array = [
-		12, 8, 8, 8, 8, 8, 8, 8, 8, 13,
-		10, rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), 11,
-		10, rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), 11,
-		10, rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), 11,
-		10, rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), 11,
-		10, rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), 11,
-		10, rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), 11,
-		10, rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), 11,
-		10, rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), 11,
-		14, 9, 9, 9, 9, 9, 9, 9, 9, 15,
+		12, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 13,
+		10, rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), 11,
+		10, rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), 11,
+		10, rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), 11,
+		10, rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), 11,
+		10, rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), 11,
+		10, rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), 11,
+		10, rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), 11,
+		10, rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), 11,
+		10, rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), 11,
+		10, rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), 11,
+		10, rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), 11,
+		10, rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), 11,
+		10, rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), 11,
+		10, rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), 11,
+		10, rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), 11,
+		10, rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), 11,
+		10, rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), 11,
+		10, rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), rng(), 11,
+		14, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 15,
 	];
 
 	print initial;
 
 	//TODO: separate this from the collision map
-	return CreateTileMap(10, 10, initial);
+	return CreateTileMap(20, 20, initial);
 }
 
 //player moves in a grid-like pattern
@@ -130,8 +139,8 @@ fn makeDrone(sprite: Opaque, spawnX: Int, spawnY: Int, tileWidth: Int, tileHeigh
 InitScreen(1280, 720, "Welcome to the Grid");
 
 fn onReady() {
-	Camera.setOffsetX(-64);
-	Camera.setOffsetY(-64);
+	Camera.setOffsetX(-8);
+	Camera.setOffsetY(0);
 	Camera.setScaleX(2);
 	Camera.setScaleY(2);
 
@@ -160,7 +169,7 @@ var tileMap = makeTileMap();
 
 fn onFrame() {
 	//offset caused by parvati's sprite layout
-	tileMap.drawToScreen(8, 16, tileset);
+	tileMap.drawToScreen(-8, 0, tileset); //matches camera's x offset
 }
 
 fn onClose() {
