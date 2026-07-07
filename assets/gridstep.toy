@@ -1,7 +1,7 @@
 //the game world
 fn makeTileMap() {
 	fn rng() {
-		return rand() % 4 + 4;
+		return abs(rand()) % 4 + 4;
 	}
 
 	//WARN: this is bugged, my brain is fried
@@ -18,7 +18,7 @@ fn makeTileMap() {
 		14, 9, 9, 9, 9, 9, 9, 9, 9, 15,
 	];
 
-	print rng();
+	print initial;
 
 	//TODO: separate this from the collision map
 	return CreateTileMap(10, 10, initial);
