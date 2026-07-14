@@ -1,0 +1,34 @@
+var tileset = null;
+var tilemap = null;
+
+fn makeTileMap() {
+	var initial: Array = [].fillWith(20*20, 1);
+
+	var i = 0;
+	while (i < 20*20) {
+		if (rand() % 5 == 0) initial[i] += 1;
+		i++;
+	}
+
+	return CreateTileMap(20, 20, initial);
+}
+
+fn onReady() {
+	Camera.setScaleX(2);
+	Camera.setScaleY(2);
+
+    tileset = LoadTileSet("assets/tiny_atlas.png", 16, 16);
+    tilemap = makeTileMap();
+}
+
+fn onFrame() {
+    tilemap.drawToScreen(0, 0, tileset);
+}
+
+fn onClose() {
+    //
+}
+
+//entry point
+InitScreen(1280, 720, "Tiny Procgen");
+InitLoop(onReady, onFrame, onClose);
