@@ -1,13 +1,21 @@
+var tileWidth: Int const = 16;
+var tileHeight: Int const = 16;
+
+var atlasWidth: Int const = 12;
+
+var tileGrass: Int const = 1;
+var tileDirt: Int const = 1 + atlasWidth * 2;
+
+
 var tileset = null;
 var tilemap = null;
 
 fn makeTileMap() {
-	var initial: Array = [].fillWith(20*20, 1);
+	var initial: Array = [].fillWith(20*20, tileGrass);
 
-	var i = 0;
-	while (i < 20*20) {
+	for (var i = 0; i < 20*20; i++) {
 		if (rand() % 5 == 0) initial[i] += 1;
-		i++;
+		//else if (rand() % 5 == 0) initial[i] += atlasWidth * 2;
 	}
 
 	return CreateTileMap(20, 20, initial);
@@ -17,7 +25,7 @@ fn onReady() {
 	Camera.setScaleX(2);
 	Camera.setScaleY(2);
 
-    tileset = LoadTileSet("assets/tiny_atlas.png", 16, 16);
+    tileset = LoadTileSet("assets/tiny_atlas.png", tileWidth, tileHeight);
     tilemap = makeTileMap();
 }
 
