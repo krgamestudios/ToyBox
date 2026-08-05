@@ -1,2 +1,10 @@
 InitScreen(800, 600, "Bottles");
 InitLoop(null, null, null);
+
+var bottle = SpawnBottleAt(42, 1000);
+
+print bottle;
+print bottle.x;
+print bottle.y;
+
+bottle.despawn();

@@ -10,8 +10,10 @@
 
 #include "keyboard.h"
 #include "mouse.h"
+#include "bottle.h"
 
 #include "standard_library.h"
+#include "scope_inspector.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -233,6 +235,9 @@ Toy_Value dispatchOpaqueAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value att
 		case OPAQUE_MOUSE_PRESSED:
 		case OPAQUE_MOUSE_RELEASED:
 			return handleMouseAttributes(vm, compound, attribute);
+
+		case OPAQUE_BOTTLE_DATA:
+			return handleBottleAttributes(vm, compound, attribute);
 	}
 
 	//only reached on error
@@ -326,8 +331,14 @@ int main(int argc, const char* argv[]) {
 
 	initStandardLibrary(&vm);
 	initGameAPI(&vm);
+	initBottleAPI(&vm);
 
 	Toy_runVM(&vm);
+
+	if (verbose) {
+		inspect_scope(vm.scope, 0);
+	}
+
 	Toy_resetVM(&vm, false, false); //leave in a valid, but unset state
 
 	//setup and run the given loop functions, if able
