@@ -10,7 +10,7 @@
 
 #include "keyboard.h"
 #include "mouse.h"
-#include "bottle.h"
+#include "terrain.h"
 
 #include "standard_library.h"
 #include "scope_inspector.h"
@@ -236,8 +236,8 @@ Toy_Value dispatchOpaqueAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value att
 		case OPAQUE_MOUSE_RELEASED:
 			return handleMouseAttributes(vm, compound, attribute);
 
-		case OPAQUE_BOTTLE_DATA:
-			return handleBottleAttributes(vm, compound, attribute);
+		case OPAQUE_TERRAIN:
+			return handleTerrainAttributes(vm, compound, attribute);
 	}
 
 	//only reached on error
@@ -329,9 +329,10 @@ int main(int argc, const char* argv[]) {
 	Toy_initVM(&vm);
 	Toy_bindVM(&vm, entryCode, NULL);
 
+	//initialize the libraries
 	initStandardLibrary(&vm);
 	initGameAPI(&vm);
-	initBottleAPI(&vm);
+	initTerrainAPI(&vm);
 
 	Toy_runVM(&vm);
 

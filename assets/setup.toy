@@ -1,10 +1,15 @@
-InitScreen(800, 600, "Bottles");
-InitLoop(null, null, null);
+InitScreen(800, 600, "Bottle Battle");
+//InitLoop(null, null, null);
 
-var bottle = SpawnBottleAt(42, 1000);
+//check the terrain object works
+var terrain = CreateTerrain(40, 40);
 
-print bottle;
-print bottle.x;
-print bottle.y;
+print terrain;
+print terrain.width;
+print terrain.height;
 
-bottle.despawn();
+terrain.setTile(20, 30, 42);
+print terrain.getTile(20, 30);
+
+UnloadTerrain(terrain);
+print terrain; //should print 'null'

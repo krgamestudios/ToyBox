@@ -28,8 +28,6 @@ Toy_Value handleMouseAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attrib
 	Toy_String* string = TOY_VALUE_AS_STRING(attribute);
 	const char* cstr = string->leaf.data;
 
-	//NOTE: this probably could use a loop too, but its short enough that IDC.
-
 	//find the correct operation
 	if (CSTR_MATCH(cstr, "LEFT")) {
 		bool result = md->callback(MOUSE_BUTTON_LEFT);
