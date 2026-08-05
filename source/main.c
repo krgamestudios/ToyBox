@@ -10,9 +10,6 @@
 
 #include "keyboard.h"
 #include "mouse.h"
-#include "camera.h"
-#include "actor.h"
-#include "tile_map.h"
 
 #include "standard_library.h"
 
@@ -86,8 +83,6 @@ unsigned char* makeCodeFromSource(const char* source) {
 typedef struct Settings {
 	bool error;
 	bool help;
-	bool version;
-	const char* script;
 	bool verbose;
 	bool uncappedFPS;
 } Settings;
@@ -97,104 +92,12 @@ void usageInfo(int argc, const char* argv[]) {
 	printf("Usage: %s [-h] [-v] [-c] [-f script.toy]\n\n", argv[0]);
 }
 
-void helpInfo(int argc, const char* argv[]) {
-	usageInfo(argc, argv);
-
-	printf("ToyBox, a game engine for The Toy Programming Langauge. Requires raylib and Toy by default.\nSee https://toylang.com for details.\n\n");
-
-	printf("  -h, --help\t\t\tShow this help then exit.\n");
-	printf("  -v, --version\t\t\tShow version and copyright information then exit.\n");
-	printf("  -f, --file script\t\tStart the game with the given script.\n");
-	printf("  -d, --verbose\t\tEnable debugging and diagnostics display.\n");
-	printf("  -c, --no-fps-cap\t\tRemove the 60 FPS cap.\n");
-
-	printf("\n");
-}
-
-void versionInfo(int argc, const char* argv[]) {
-	(void)argc;
-	(void)argv;
-
-	const char* boxLicense =
-		"Copyright (c) 2026 Kayne Ruse, KR Game Studios\n"
-		"\n"
-		"This software is provided 'as-is', without any express or implied\n"
-		"warranty. In no event will the authors be held liable for any damages\n"
-		"arising from the use of this software.\n"
-		"\n"
-		"Permission is granted to anyone to use this software for any purpose,\n"
-		"including commercial applications, and to alter it and redistribute it\n"
-		"freely, subject to the following restrictions:\n"
-		"\n"
-		"1. The origin of this software must not be misrepresented; you must not\n"
-		"claim that you wrote the original software. If you use this software\n"
-		"in a product, an acknowledgment in the product documentation would be\n"
-		"appreciated but is not required.\n"
-		"2. Altered source versions must be plainly marked as such, and must not be\n"
-		"misrepresented as being the original software.\n"
-		"3. This notice may not be removed or altered from any source distribution.\n"
-		"\n"
-	;
-
-	//Toy copyright
-	const char* toyLicense =
-		"Copyright (c) 2020-2026 Kayne Ruse, KR Game Studios\n"
-		"\n"
-		"This software is provided 'as-is', without any express or implied\n"
-		"warranty. In no event will the authors be held liable for any damages\n"
-		"arising from the use of this software.\n"
-		"\n"
-		"Permission is granted to anyone to use this software for any purpose,\n"
-		"including commercial applications, and to alter it and redistribute it\n"
-		"freely, subject to the following restrictions:\n"
-		"\n"
-		"1. The origin of this software must not be misrepresented; you must not\n"
-		"claim that you wrote the original software. If you use this software\n"
-		"in a product, an acknowledgment in the product documentation would be\n"
-		"appreciated but is not required.\n"
-		"2. Altered source versions must be plainly marked as such, and must not be\n"
-		"misrepresented as being the original software.\n"
-		"3. This notice may not be removed or altered from any source distribution.\n"
-		"\n"
-	;
-
-	printf("The ToyBox Game Engine and The Toy Programming Langauge are released under the zlib license.\n\n");
-
-	printf("-------------------------\n\n");
-
-	printf("The ToyBox Game Engine, This Version is in Early Development\n\n%s", boxLicense);
-
-	printf("-------------------------\n\n");
-
-	printf("The Toy Programming Language, Version %d.%d.%d %s\n\n%s", TOY_VERSION_MAJOR, TOY_VERSION_MINOR, TOY_VERSION_PATCH, TOY_VERSION_BUILD, toyLicense);
-}
-
 Settings parseSettings(int argc, const char* argv[]) {
 	Settings settings = {0};
 
 	for (int i = 1; i < argc; i++) {
 		if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--help")) {
 			settings.help = true;
-		}
-
-		else if (!strcmp(argv[i], "-v") || !strcmp(argv[i], "--version")) {
-			settings.version = true;
-		}
-
-		else if (!strcmp(argv[i], "-f") || !strcmp(argv[i], "--file")) {
-			if (argc <= i + 1) {
-				settings.error = true;
-				break;
-			}
-
-			if (settings.script != NULL) {
-				fprintf(stderr, TOY_CC_ERROR "ERROR: No more than one script file allowed\n" TOY_CC_RESET);
-				settings.error = true;
-				break;
-			}
-
-			i++;
-			settings.script = argv[i];
 		}
 
 		else if (!strcmp(argv[i], "-d") || !strcmp(argv[i], "--verbose")) {
@@ -224,6 +127,14 @@ static bool uncappedFPS = false;
 void api_initScreen(Toy_VM* vm, Toy_FunctionNative* self) {
 	(void)self;
 
+	//check parameter count
+	if (vm->stack->count < 3) {
+		char buffer[256];
+		snprintf(buffer, 256, "Not enough parameters found in 'InitScreen'");
+		Toy_error(buffer);
+		return;
+	}
+
 	Toy_Value caption = Toy_popStack(&vm->stack);
 	Toy_Value height = Toy_popStack(&vm->stack);
 	Toy_Value width = Toy_popStack(&vm->stack);
@@ -251,6 +162,13 @@ void api_initScreen(Toy_VM* vm, Toy_FunctionNative* self) {
 
 void api_initLoop(Toy_VM* vm, Toy_FunctionNative* self) {
 	(void)self;
+
+	if (vm->stack->count < 3) {
+		char buffer[256];
+		snprintf(buffer, 256, "Not enough parameters found in 'InitLoop'");
+		Toy_error(buffer);
+		return;
+	}
 
 	Toy_Value valueOnClose = Toy_popStack(&vm->stack);
 	Toy_Value valueOnFrame = Toy_popStack(&vm->stack);
@@ -315,21 +233,6 @@ Toy_Value dispatchOpaqueAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value att
 		case OPAQUE_MOUSE_PRESSED:
 		case OPAQUE_MOUSE_RELEASED:
 			return handleMouseAttributes(vm, compound, attribute);
-
-		case OPAQUE_CAMERA:
-			return handleCameraAttributes(vm, compound, attribute);
-
-		case OPAQUE_SPRITE_DATA:
-			return handleSpriteAttributes(vm, compound, attribute);
-
-		case OPAQUE_ACTOR_DATA:
-			return handleActorAttributes(vm, compound, attribute);
-
-		case OPAQUE_TILE_SET:
-			return handleTileSetAttributes(vm, compound, attribute);
-
-		case OPAQUE_TILE_MAP:
-			return handleTileMapAttributes(vm, compound, attribute);
 	}
 
 	//only reached on error
@@ -379,12 +282,6 @@ void initGameAPI(Toy_VM* vm) {
 	DECLARE_OPAQUE("Mouse", &mouseData, vm->scope, &vm->memoryBucket);
 	DECLARE_OPAQUE("MousePressed", &mousePressedData, vm->scope, &vm->memoryBucket);
 	DECLARE_OPAQUE("MouseReleased", &mouseReleasedData, vm->scope, &vm->memoryBucket);
-
-	DECLARE_OPAQUE("Camera", &cameraData, vm->scope, &vm->memoryBucket);
-
-	//opaque APIs
-	initActorAPI(vm);
-	initTileMapAPI(vm);
 }
 
 //main file
@@ -396,17 +293,9 @@ int main(int argc, const char* argv[]) {
 
 	//read settings and handle errors
 	Settings settings = parseSettings(argc, argv);
-	if (settings.error) {
+	if (settings.error || settings.help) {
 		usageInfo(argc, argv);
 		return 1;
-	}
-	else if (settings.help) {
-		helpInfo(argc, argv);
-		return 0;
-	}
-	else if (settings.version) {
-		versionInfo(argc, argv);
-		return 0;
 	}
 
 	//static flags to avoid extra params
@@ -415,12 +304,12 @@ int main(int argc, const char* argv[]) {
 
 	//load the entry point
 	int size = 0;
-	const char* source = (char*)readFile(settings.script != NULL ? settings.script : "assets/main.toy", &size);
+	const char* source = (char*)readFile("assets/setup.toy", &size);
 
 	if (!source) {
 		fprintf(stderr, TOY_CC_ERROR "File read error: " TOY_CC_RESET);
 		if (size == -1) {
-			fprintf(stderr, TOY_CC_ERROR "Couldn't find '%s'\n" TOY_CC_RESET, settings.script != NULL ? settings.script : "assets/main.toy");
+			fprintf(stderr, TOY_CC_ERROR "Couldn't find setup.toy\n" TOY_CC_RESET);
 		}
 		else {
 			fprintf(stderr, TOY_CC_ERROR "Cause unknown\n" TOY_CC_RESET);
@@ -454,8 +343,7 @@ int main(int argc, const char* argv[]) {
 	}
 
 	while (!WindowShouldClose()) {
-		//process the actors (if possible)
-		processActors(&vm);
+		//TODO: process bots
 
 		//begin drawing before the call to onFrame
 		BeginDrawing();
@@ -464,7 +352,7 @@ int main(int argc, const char* argv[]) {
 		//run the onFrame function
 		Toy_runVM(&vm); //no check needed, empty VMs are skipped
 
-		drawActors(&vm);
+		//TODO: draw bots
 
 		if (verbose) {
 			DrawFPS(0,0);
@@ -484,8 +372,6 @@ int main(int argc, const char* argv[]) {
 		Toy_runVM(&vm);
 		Toy_resetVM(&vm, false, false);
 	}
-
-	freeActorAPI(&vm);
 
 	Toy_freeVM(&vm);
 	free(entryCode);

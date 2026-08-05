@@ -1,0 +1,2 @@
+InitScreen(800, 600, "Bottles");
+InitLoop(null, null, null);
