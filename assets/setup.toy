@@ -1,4 +1,4 @@
-InitScreen(800, 600, "Bottle Battle");
+InitScreen(1080, 720, "Bottle Battle");
 //InitLoop(null, null, null);
 
 //check the terrain object works
