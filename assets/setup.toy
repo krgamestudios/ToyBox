@@ -1,14 +1,22 @@
 InitScreen(1080, 720, "Bottle Battle");
 //InitLoop(null, null, null);
 
-//check the terrain object works
-var terrain = CreateTerrain(40, 40);
+var terrain = LoadTerrain();
+print terrain;
 
-//set up some "walls"
-for (var i = 0; i < terrain.width; i++) {
-    terrain.setTile(i, 0, 1);
-}
+if (terrain == null) {
+	terrain = CreateTerrain(40, 40);
 
-for (var j = 0; j < terrain.height; j++) {
-    terrain.setTile(terrain.width - 1, j, 1);
+	//set up some "walls" along the edges
+	for (var i = 0; i < terrain.width; i++) {
+		terrain.setTile(i, 0, 1);
+		terrain.setTile(i, terrain.height - 1, 1);
+	}
+
+	for (var j = 0; j < terrain.height; j++) {
+		terrain.setTile(0, j, 1);
+		terrain.setTile(terrain.width - 1, j, 1);
+	}
+
+	SaveTerrain(terrain);
 }

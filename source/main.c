@@ -16,6 +16,7 @@
 #include "standard_library.h"
 #include "scope_inspector.h"
 
+#include "database.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -28,6 +29,11 @@ static int errorAndContinueCallback(const char* msg) {
 static int assertFailureAndExitCallback(const char* msg) {
 	fprintf(stderr, TOY_CC_ASSERT "Assert Failure: %s" TOY_CC_RESET "\n", msg);
 	exit(-1);
+}
+
+static void sqliteErrorCallback(void* ptr, int err, const char* msg) {
+	(void)ptr;
+	fprintf(stderr, TOY_CC_ERROR "SQL Error Code %d: %s" TOY_CC_RESET "\n", err, msg);
 }
 
 unsigned char* readFile(const char* path, int* size) {
@@ -125,6 +131,9 @@ static Toy_Function* onFrame = NULL;
 static Toy_Function* onClose = NULL;
 static bool verbose = false;
 static bool uncappedFPS = false;
+
+//non-static members
+sqlite3* database = NULL;
 
 //game API definitions
 void api_initScreen(Toy_VM* vm, Toy_FunctionNative* self) {
@@ -296,6 +305,7 @@ int main(int argc, const char* argv[]) {
 	Toy_setPrintCallback(puts);
 	Toy_setErrorCallback(errorAndContinueCallback);
 	Toy_setAssertFailureCallback(assertFailureAndExitCallback);
+	sqlite3_config(SQLITE_CONFIG_LOG, sqliteErrorCallback);
 
 	//read settings and handle errors
 	Settings settings = parseSettings(argc, argv);
@@ -307,6 +317,9 @@ int main(int argc, const char* argv[]) {
 	//static flags to avoid extra params
 	verbose = settings.verbose;
 	uncappedFPS = settings.uncappedFPS;
+
+	//open the database
+	sqlite3_open("save.db", &database);
 
 	//load the entry point
 	int size = 0;
@@ -402,6 +415,8 @@ int main(int argc, const char* argv[]) {
 	if (IsWindowReady()) {
 		CloseWindow();
 	}
+
+	sqlite3_close(database);
 
 	return 0;
 }

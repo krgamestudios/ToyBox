@@ -2,6 +2,7 @@
 
 #include "toy_console_colors.h"
 
+#include "database.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -45,6 +46,12 @@ void api_createTerrain(Toy_VM* vm, Toy_FunctionNative* self) {
 		return;
 	}
 
+	//free existing terrain, if any
+	if (TOY_VALUE_IS_OPAQUE(terrainValue)) {
+		free(TOY_VALUE_AS_OPAQUE(terrainValue));
+		Toy_freeValue(terrainValue);
+	}
+
 	Terrain* terrain = malloc(sizeof(Terrain) + sizeof(unsigned int) * TOY_VALUE_AS_INTEGER(width) * TOY_VALUE_AS_INTEGER(height));
 	terrain->type = OPAQUE_TERRAIN;
 	terrain->width = TOY_VALUE_AS_INTEGER(width);
@@ -85,6 +92,124 @@ void api_unloadTerrain(Toy_VM* vm, Toy_FunctionNative* self) {
 	}
 }
 
+void api_loadTerrain(Toy_VM* vm, Toy_FunctionNative* self) {
+	(void)self;
+
+	//BUGFIX: first, check if the terrain exists
+	{
+		sqlite3_stmt* stmt;
+		sqlite3_prepare(
+			database,
+			"SELECT COUNT(*) FROM terrain WHERE id = ?;",
+			-1,
+			&stmt,
+			NULL
+		);
+		sqlite3_bind_int(stmt, 1, 1); //id
+		sqlite3_step(stmt);
+		int count = sqlite3_column_int(stmt, 0);
+		sqlite3_finalize(stmt);
+		if (count <= 0) { //no data found
+			Toy_pushStack(&vm->stack, TOY_VALUE_FROM_NULL());
+			return;
+		}
+	}
+
+	//prepare the database stmt
+	sqlite3_stmt* stmt;
+	int rc = sqlite3_prepare(
+		database,
+		"SELECT * FROM terrain WHERE id = ?;",
+		-1,
+		&stmt,
+		NULL
+	);
+
+	if (rc != SQLITE_OK) {
+		char buffer[256];
+		snprintf(buffer, 256, "SQLite3 returned an error code %d", rc);
+		Toy_error(buffer);
+		return;
+	}
+
+	sqlite3_bind_int(stmt, 1, 1); //id
+	sqlite3_step(stmt);
+
+	//free existing terrain, if any
+	if (TOY_VALUE_IS_OPAQUE(terrainValue)) {
+		free(TOY_VALUE_AS_OPAQUE(terrainValue));
+		Toy_freeValue(terrainValue);
+	}
+
+	unsigned int width = sqlite3_column_int(stmt, 1);
+	unsigned int height = sqlite3_column_int(stmt, 2);
+
+	Terrain* terrain = malloc(sizeof(Terrain) + sizeof(unsigned int) * width * height);
+	terrain->type = OPAQUE_TERRAIN;
+	terrain->width = width;
+	terrain->height = height;
+	if (terrain->width * terrain->height > 0) {
+		memcpy(terrain->data, (unsigned int*)sqlite3_column_blob(stmt, 3), sizeof(unsigned int) * terrain->width * terrain->height);
+	}
+
+	sqlite3_finalize(stmt);
+
+	//leave the reference on the stack
+	terrainValue = TOY_OPAQUE_FROM_POINTER(terrain);
+	Toy_pushStack(&vm->stack, TOY_REFERENCE_FROM_POINTER(&terrainValue));
+}
+
+void api_saveTerrain(Toy_VM* vm, Toy_FunctionNative* self) {
+	(void)self;
+
+	//check parameter count
+	if (vm->stack->count < 1) {
+		char buffer[256];
+		snprintf(buffer, 256, "Not enough parameters found in 'SaveTerrain'");
+		Toy_error(buffer);
+		return;
+	}
+
+	Toy_Value value = Toy_popStack(&vm->stack);
+
+	//check types
+	if (!TOY_VALUE_IS_OPAQUE(value) || ((Terrain*)TOY_VALUE_AS_OPAQUE(value))->type != OPAQUE_TERRAIN) {
+		char buffer[256];
+		snprintf(buffer, 256, "Bad parameter types found in 'SaveTerrain'");
+		Toy_error(buffer);
+		Toy_freeValue(value);
+		return;
+	}
+
+	Terrain* terrain = TOY_VALUE_AS_OPAQUE(value);
+
+	//prepare the database stmt
+	sqlite3_stmt* stmt;
+	int rc = sqlite3_prepare(
+		database,
+		"INSERT OR REPLACE INTO terrain VALUES (?, ?, ?, ?);",
+		-1,
+		&stmt,
+		NULL
+	);
+
+	if (rc != SQLITE_OK) {
+		char buffer[256];
+		snprintf(buffer, 256, "SQLite3 returned an error code %d", rc);
+		Toy_error(buffer);
+		return;
+	}
+
+	sqlite3_bind_int(stmt, 1, 1); //id
+	sqlite3_bind_int(stmt, 2, terrain->width); //width
+	sqlite3_bind_int(stmt, 3, terrain->height); //height
+	sqlite3_bind_blob(stmt, 4, terrain->data, terrain->width * terrain->height * sizeof(unsigned int), SQLITE_STATIC); //data
+
+	//execute and finish
+	sqlite3_step(stmt);
+	sqlite3_finalize(stmt);
+}
+
 //callback utils
 typedef struct CallbackPairs {
 	const char* name;
@@ -94,6 +219,8 @@ typedef struct CallbackPairs {
 static CallbackPairs callbackPairs[] = {
 	{"CreateTerrain", api_createTerrain},
 	{"UnloadTerrain", api_unloadTerrain},
+	{"LoadTerrain", api_loadTerrain},
+	{"SaveTerrain", api_saveTerrain},
 	{NULL, NULL},
 };
 
@@ -112,6 +239,31 @@ void initTerrainAPI(Toy_VM* vm) {
 
 		Toy_freeString(key);
 	}
+
+	sqlite3_stmt* stmt;
+	int rc = sqlite3_prepare(
+		database,
+		"CREATE TABLE IF NOT EXISTS terrain (id PRIMARY KEY ON CONFLICT REPLACE, width INTEGER, height INTEGER, data BLOB);",
+		-1,
+		&stmt,
+		NULL
+	);
+
+	if (rc != SQLITE_OK) {
+		char buffer[256];
+		snprintf(buffer, 256, "SQLite3 returned an error code %d", rc);
+		Toy_error(buffer);
+		return;
+	}
+
+	if (sqlite3_step(stmt) != SQLITE_DONE) {
+		char buffer[256];
+		snprintf(buffer, 256, "SQLite3 failed to initialize the terrain correctly");
+		Toy_error(buffer);
+		return;
+	}
+
+	sqlite3_finalize(stmt);
 }
 
 //attributes for terrain
