@@ -13,3 +13,5 @@ typedef struct Terrain {
 void initTerrainAPI(Toy_VM* vm);
 
 Toy_Value handleTerrainAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attribute);
+
+Terrain* getTerrainPtr();

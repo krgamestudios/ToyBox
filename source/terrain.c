@@ -235,3 +235,12 @@ Toy_Value handleTerrainAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attr
 		return TOY_VALUE_FROM_NULL();
 	}
 }
+
+Terrain* getTerrainPtr() {
+	if (TOY_VALUE_IS_OPAQUE(terrainValue)) {
+		return (Terrain*)TOY_VALUE_AS_OPAQUE(terrainValue);
+	}
+	else {
+		return NULL;
+	}
+}

@@ -11,6 +11,7 @@
 #include "keyboard.h"
 #include "mouse.h"
 #include "terrain.h"
+#include "tileset.h"
 
 #include "standard_library.h"
 #include "scope_inspector.h"
@@ -342,6 +343,9 @@ int main(int argc, const char* argv[]) {
 
 	Toy_resetVM(&vm, false, false); //leave in a valid, but unset state
 
+	//load graphical assets
+	Tileset tileset = loadTileset("assets/terrain.png", 16, 16);
+
 	//setup and run the given loop functions, if able
 	if (onReady != NULL) {
 		Toy_bindVM(&vm, onReady->bytecode.code, onReady->bytecode.parentScope);
@@ -355,14 +359,19 @@ int main(int argc, const char* argv[]) {
 	}
 
 	while (!WindowShouldClose()) {
+		//run the onFrame function
+		Toy_runVM(&vm); //no check needed, empty VMs are skipped
 		//TODO: process bots
 
-		//begin drawing before the call to onFrame
+		//rendering all at once
 		BeginDrawing();
 		ClearBackground(WHITE); //TODO: remove this once the whole screen is covered
 
-		//run the onFrame function
-		Toy_runVM(&vm); //no check needed, empty VMs are skipped
+		//draw the terrain, if able
+		Terrain* terrain = getTerrainPtr();
+		if (terrain) {
+			drawDataWithTileset(tileset, terrain->width, terrain->height, terrain->data);
+		}
 
 		//TODO: draw bots
 
@@ -387,6 +396,8 @@ int main(int argc, const char* argv[]) {
 
 	Toy_freeVM(&vm);
 	free(entryCode);
+
+	unloadTileset(tileset);
 
 	if (IsWindowReady()) {
 		CloseWindow();
