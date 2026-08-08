@@ -12,6 +12,7 @@
 #include "mouse.h"
 #include "terrain.h"
 #include "tileset.h"
+#include "player.h"
 
 #include "standard_library.h"
 #include "scope_inspector.h"
@@ -20,6 +21,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <dirent.h>
 
 //utils
 static int errorAndContinueCallback(const char* msg) {
@@ -31,7 +33,7 @@ static int assertFailureAndExitCallback(const char* msg) {
 	exit(-1);
 }
 
-static void sqliteErrorCallback(void* ptr, int err, const char* msg) {
+static void sqliteErrorAndContinueCallback(void* ptr, int err, const char* msg) {
 	(void)ptr;
 	fprintf(stderr, TOY_CC_ERROR "SQL Error Code %d: %s" TOY_CC_RESET "\n", err, msg);
 }
@@ -135,7 +137,7 @@ static bool uncappedFPS = false;
 //non-static members
 sqlite3* database = NULL;
 
-//game API definitions
+//engine API definitions
 void api_initScreen(Toy_VM* vm, Toy_FunctionNative* self) {
 	(void)self;
 
@@ -263,7 +265,7 @@ typedef struct CallbackPairs {
 
 static CallbackPairs callbackPairs[] = {
 	{"InitScreen", api_initScreen},
-	{"InitLoop", api_initLoop},
+	{"InitLoop", api_initLoop}, //TODO: remove this, or leave it for debugging?
 	{NULL, NULL},
 };
 
@@ -274,13 +276,11 @@ static CallbackPairs callbackPairs[] = {
 	Toy_freeString(name); \
 }
 
-void initGameAPI(Toy_VM* vm) {
+void initEngineAPI(Toy_VM* vm) {
 	if (vm == NULL || vm->scope == NULL || vm->memoryBucket == NULL) {
 		fprintf(stderr, TOY_CC_ERROR "ERROR: Can't initialize game API, exiting\n" TOY_CC_RESET);
 		exit(-1);
 	}
-
-	Toy_setOpaqueAttributeHandler(dispatchOpaqueAttributes);
 
 	//declare each function in the global scope
 	for (int i = 0; callbackPairs[i].name; i++) {
@@ -289,6 +289,15 @@ void initGameAPI(Toy_VM* vm) {
 		Toy_declareScope(vm->scope, key, TOY_VALUE_FUNCTION, TOY_VALUE_FROM_FUNCTION(fn), true);
 		Toy_freeString(key);
 	}
+}
+
+void initGameAPI(Toy_VM* vm) {
+	if (vm == NULL || vm->scope == NULL || vm->memoryBucket == NULL) {
+		fprintf(stderr, TOY_CC_ERROR "ERROR: Can't initialize game API, exiting\n" TOY_CC_RESET);
+		exit(-1);
+	}
+
+	Toy_setOpaqueAttributeHandler(dispatchOpaqueAttributes);
 
 	DECLARE_OPAQUE("Keyboard", &keyboardData, vm->scope, &vm->memoryBucket);
 	DECLARE_OPAQUE("KeyPressed", &keyPressedData, vm->scope, &vm->memoryBucket);
@@ -297,6 +306,61 @@ void initGameAPI(Toy_VM* vm) {
 	DECLARE_OPAQUE("Mouse", &mouseData, vm->scope, &vm->memoryBucket);
 	DECLARE_OPAQUE("MousePressed", &mousePressedData, vm->scope, &vm->memoryBucket);
 	DECLARE_OPAQUE("MouseReleased", &mouseReleasedData, vm->scope, &vm->memoryBucket);
+
+	//individual systems
+	initTerrainAPI(vm);
+}
+
+//util for finding and loading all players
+Player** loadPlayers(int* playerArraySize) {
+	if (*playerArraySize != 0) {
+		fprintf(stderr, TOY_CC_ERROR "Bad params passed to 'loadPlayers'" TOY_CC_RESET "\n");
+		return NULL;
+	}
+
+	DIR* dr = opendir("users");
+	if (dr == NULL) {
+		fprintf(stderr, TOY_CC_ERROR "Couldn't open the directory 'users'" TOY_CC_RESET "\n");
+		*playerArraySize = 0;
+		return NULL;
+	}
+
+	//WARN: players capped at 8
+	Player** playerArrayHandle = malloc(sizeof(Player*) * 8);
+
+	struct dirent *de;
+	while ((de = readdir(dr)) != NULL && (*playerArraySize) < 8) {
+		if (de->d_type == DT_DIR) {
+			//build the path to the main file
+			char mainfile[1024];
+			snprintf(mainfile, 1024, "users/%s/main.toy", de->d_name);
+
+			//load & compile the player script
+			int size = 0;
+			const char* source = (char*)readFile(mainfile, &size);
+			if (source == NULL) {
+				continue;
+			}
+			unsigned char* code = makeCodeFromSource(source);
+			playerArrayHandle[*playerArraySize] = allocatePlayer();
+			bindBytecodeToPlayer(playerArrayHandle[*playerArraySize], code);
+
+			initStandardLibrary(&(playerArrayHandle[*playerArraySize])->vm);
+			initGameAPI(&(playerArrayHandle[*playerArraySize])->vm);
+
+			(*playerArraySize)++;
+		}
+	}
+	closedir(dr);
+	return playerArrayHandle;
+}
+
+void freePlayers(Player** playerArrayHandle, int* playerArraySize) {
+	for (int i = 0; i < *playerArraySize; i++) {
+		freePlayer(playerArrayHandle[i]);
+	}
+	free(playerArrayHandle);
+	*playerArraySize = 0;
 }
 
 //main file
@@ -305,7 +369,7 @@ int main(int argc, const char* argv[]) {
 	Toy_setPrintCallback(puts);
 	Toy_setErrorCallback(errorAndContinueCallback);
 	Toy_setAssertFailureCallback(assertFailureAndExitCallback);
-	sqlite3_config(SQLITE_CONFIG_LOG, sqliteErrorCallback);
+	sqlite3_config(SQLITE_CONFIG_LOG, sqliteErrorAndContinueCallback);
 
 	//read settings and handle errors
 	Settings settings = parseSettings(argc, argv);
@@ -321,7 +385,7 @@ int main(int argc, const char* argv[]) {
 	//open the database
 	sqlite3_open("save.db", &database);
 
-	//load the entry point
+	//run the setup script
 	int size = 0;
 	const char* source = (char*)readFile("assets/setup.toy", &size);
 
@@ -345,8 +409,8 @@ int main(int argc, const char* argv[]) {
 
 	//initialize the libraries
 	initStandardLibrary(&vm);
+	initEngineAPI(&vm);
 	initGameAPI(&vm);
-	initTerrainAPI(&vm);
 
 	Toy_runVM(&vm);
 
@@ -358,6 +422,14 @@ int main(int argc, const char* argv[]) {
 
 	//load graphical assets
 	Tileset tileset = loadTileset("assets/terrain.png", 16, 16);
+
+	//load players
+	int playerArraySize = 0;
+	Player** playerArrayHandle = loadPlayers(&playerArraySize);
+	if (playerArraySize <= 0) {
+		fprintf(stderr, TOY_CC_ERROR "Player loading failed" TOY_CC_RESET "\n");
+		return -1;
+	}
 
 	//setup and run the given loop functions, if able
 	if (onReady != NULL) {
@@ -374,7 +446,11 @@ int main(int argc, const char* argv[]) {
 	while (!WindowShouldClose()) {
 		//run the onFrame function
 		Toy_runVM(&vm); //no check needed, empty VMs are skipped
-		//TODO: process bots
+
+		//process player scripts
+		for (int i = 0; i < playerArraySize; i++) {
+			Toy_runVM(&(playerArrayHandle[i])->vm);
+		}
 
 		//rendering all at once
 		BeginDrawing();
@@ -406,6 +482,8 @@ int main(int argc, const char* argv[]) {
 		Toy_runVM(&vm);
 		Toy_resetVM(&vm, false, false);
 	}
+
+	freePlayers(playerArrayHandle, &playerArraySize);
 
 	Toy_freeVM(&vm);
 	free(entryCode);

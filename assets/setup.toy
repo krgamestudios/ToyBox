@@ -1,5 +1,4 @@
 InitScreen(1080, 720, "Bottle Battle");
-//InitLoop(null, null, null);
 
 var terrain = LoadTerrain();
 print terrain;

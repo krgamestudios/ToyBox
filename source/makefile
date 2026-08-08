@@ -1,6 +1,6 @@
 #compiler settings
 CC=gcc
-CFLAGS+=-std=c17 -g -Wall -Werror -Wextra -Wpedantic -Wformat=2 -Wno-newline-eof
+CFLAGS+=-std=c17 -g -Wall -Werror -Wextra -Wpedantic -Wformat=2 -Wno-newline-eof -D_DEFAULT_SOURCE
 LIBS+=-lToy -lraylib -lX11 -lm -lsqlite3
 LDFLAGS+=-Wl,-rpath,'$$ORIGIN'
 
