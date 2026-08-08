@@ -289,6 +289,8 @@ void initEngineAPI(Toy_VM* vm) {
 		Toy_declareScope(vm->scope, key, TOY_VALUE_FUNCTION, TOY_VALUE_FROM_FUNCTION(fn), true);
 		Toy_freeString(key);
 	}
+
+	initTerrainAPI(vm);
 }
 
 void initGameAPI(Toy_VM* vm) {
@@ -307,8 +309,7 @@ void initGameAPI(Toy_VM* vm) {
 	DECLARE_OPAQUE("MousePressed", &mousePressedData, vm->scope, &vm->memoryBucket);
 	DECLARE_OPAQUE("MouseReleased", &mouseReleasedData, vm->scope, &vm->memoryBucket);
 
-	//individual systems
-	initTerrainAPI(vm);
+	initTerrainReadOnlyAPI(vm);
 }
 
 //util for finding and loading all players
@@ -449,7 +450,12 @@ int main(int argc, const char* argv[]) {
 
 		//process player scripts
 		for (int i = 0; i < playerArraySize; i++) {
-			Toy_runVM(&(playerArrayHandle[i])->vm);
+			Toy_VM* pvm = &(playerArrayHandle[i])->vm;
+			pvm->scope = Toy_pushScope(&pvm->memoryBucket, pvm->scope); //this temporary scope lets users declare vars in the root of the file
+
+			Toy_runVM(pvm);
+
+			pvm->scope = Toy_popScope(pvm->scope);
 		}
 
 		//rendering all at once

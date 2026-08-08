@@ -1,3 +1,8 @@
 print "Hello zelda";
 
-if (Keyboard.SPACE) print "yay!";
+if (Keyboard.SPACE) print "Yay!";
+
+var terrain = GetTerrain();
+
+print terrain.getTile(0, 0);
+print terrain.getTile(1, 1);

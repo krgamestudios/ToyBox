@@ -12,10 +12,18 @@
 
 //static members
 static Toy_Value terrainValue = {0};
+static bool terrainLocked = false;
 
 void api_createTerrain(Toy_VM* vm, Toy_FunctionNative* self) {
     //width, height -> Opaque(Terrain)
 	(void)self;
+
+	if (terrainLocked) {
+		char buffer[256];
+		snprintf(buffer, 256, "Can't call 'CreateTerrain' while terrain is locked");
+		Toy_error(buffer);
+		return;
+	}
 
 	//check parameter count
 	if (vm->stack->count < 2) {
@@ -66,6 +74,13 @@ void api_createTerrain(Toy_VM* vm, Toy_FunctionNative* self) {
 void api_unloadTerrain(Toy_VM* vm, Toy_FunctionNative* self) {
 	(void)self;
 
+	if (terrainLocked) {
+		char buffer[256];
+		snprintf(buffer, 256, "Can't call 'UnloadTerrain' while terrain is locked");
+		Toy_error(buffer);
+		return;
+	}
+
 	//check parameter count
 	if (vm->stack->count < 1) {
 		char buffer[256];
@@ -94,6 +109,13 @@ void api_unloadTerrain(Toy_VM* vm, Toy_FunctionNative* self) {
 
 void api_loadTerrain(Toy_VM* vm, Toy_FunctionNative* self) {
 	(void)self;
+
+	if (terrainLocked) {
+		char buffer[256];
+		snprintf(buffer, 256, "Can't call 'LoadTerrain' while terrain is locked");
+		Toy_error(buffer);
+		return;
+	}
 
 	//BUGFIX: first, check if the terrain exists
 	{
@@ -162,6 +184,13 @@ void api_loadTerrain(Toy_VM* vm, Toy_FunctionNative* self) {
 void api_saveTerrain(Toy_VM* vm, Toy_FunctionNative* self) {
 	(void)self;
 
+	if (terrainLocked) {
+		char buffer[256];
+		snprintf(buffer, 256, "Can't call 'SaveTerrain' while terrain is locked");
+		Toy_error(buffer);
+		return;
+	}
+
 	//check parameter count
 	if (vm->stack->count < 1) {
 		char buffer[256];
@@ -210,6 +239,41 @@ void api_saveTerrain(Toy_VM* vm, Toy_FunctionNative* self) {
 	sqlite3_finalize(stmt);
 }
 
+void api_getTerrain(Toy_VM* vm, Toy_FunctionNative* self) {
+	(void)self;
+
+	if (TOY_VALUE_IS_OPAQUE(terrainValue)) {
+		Toy_pushStack(&vm->stack, TOY_REFERENCE_FROM_POINTER(&terrainValue));
+	}
+	else {
+		Toy_pushStack(&vm->stack, TOY_VALUE_FROM_NULL());
+	}
+}
+
+void api_setTerrainLockState(Toy_VM* vm, Toy_FunctionNative* self) {
+	(void)self;
+
+	//check parameter count
+	if (vm->stack->count < 1) {
+		char buffer[256];
+		snprintf(buffer, 256, "Not enough parameters found in 'SetTerrainLockState'");
+		Toy_error(buffer);
+		return;
+	}
+
+	Toy_Value state = Toy_popStack(&vm->stack);
+
+	if (!TOY_VALUE_IS_BOOLEAN(state)) {
+		char buffer[256];
+		snprintf(buffer, 256, "Bad parameter types found in 'SetTerrainLockState'");
+		Toy_error(buffer);
+		Toy_freeValue(state);
+		return;
+	}
+
+	terrainLocked = TOY_VALUE_AS_BOOLEAN(state);
+}
+
 //callback utils
 typedef struct CallbackPairs {
 	const char* name;
@@ -221,6 +285,8 @@ static CallbackPairs callbackPairs[] = {
 	{"UnloadTerrain", api_unloadTerrain},
 	{"LoadTerrain", api_loadTerrain},
 	{"SaveTerrain", api_saveTerrain},
+	// {"GetTerrain", api_getTerrain}, //accessed with 'initTerrainReadOnlyAPI'
+	{"SetTerrainLockState", api_setTerrainLockState},
 	{NULL, NULL},
 };
 
@@ -240,6 +306,7 @@ void initTerrainAPI(Toy_VM* vm) {
 		Toy_freeString(key);
 	}
 
+	//create the table for storage
 	sqlite3_stmt* stmt;
 	int rc = sqlite3_prepare(
 		database,
@@ -266,9 +333,38 @@ void initTerrainAPI(Toy_VM* vm) {
 	sqlite3_finalize(stmt);
 }
 
+static CallbackPairs readOnlyLockPairs[] = {
+	{"GetTerrain", api_getTerrain},
+	{NULL, NULL},
+};
+
+void initTerrainReadOnlyAPI(Toy_VM* vm) {
+	if (vm == NULL || vm->scope == NULL || vm->memoryBucket == NULL) {
+		fprintf(stderr, TOY_CC_ERROR "ERROR: Can't initialize the terrain API, exiting\n" TOY_CC_RESET);
+		exit(-1);
+	}
+
+	//declare each callback in the global scope
+	for (int i = 0; readOnlyLockPairs[i].name; i++) {
+		Toy_String* key = Toy_createStringLength(&(vm->memoryBucket), readOnlyLockPairs[i].name, strlen(readOnlyLockPairs[i].name));
+		Toy_Function* fn = Toy_createFunctionFromCallback(&(vm->memoryBucket), readOnlyLockPairs[i].callback);
+
+		Toy_declareScope(vm->scope, key, TOY_VALUE_FUNCTION, TOY_VALUE_FROM_FUNCTION(fn), true);
+
+		Toy_freeString(key);
+	}
+}
+
 //attributes for terrain
 static void attr_terrainSetTile(Toy_VM* vm, Toy_FunctionNative* self) {
 	(void)self;
+
+	if (terrainLocked) {
+		char buffer[256];
+		snprintf(buffer, 256, "Can't call 'Terrain.setTile()' while terrain is locked");
+		Toy_error(buffer);
+		return;
+	}
 
 	//check parameter count
 	if (vm->stack->count < 4) {
@@ -372,7 +468,7 @@ Toy_Value handleTerrainAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attr
 	else if (CSTR_MATCH(cstr, "height")) {
 		return TOY_VALUE_FROM_INTEGER(terrain->height);
 	}
-	else if (CSTR_MATCH(cstr, "setTile")) {
+	else if (CSTR_MATCH(cstr, "setTile") && !terrainLocked) {
 		Toy_Function* fn = Toy_createFunctionFromCallback(&vm->memoryBucket, attr_terrainSetTile);
 		return TOY_VALUE_FROM_FUNCTION(fn);
 	}

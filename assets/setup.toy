@@ -19,3 +19,5 @@ if (terrain == null) {
 
 	SaveTerrain(terrain);
 }
+
+SetTerrainLockState(true);
