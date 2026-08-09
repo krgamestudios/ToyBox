@@ -301,7 +301,7 @@ void initTerrainAPI(Toy_VM* vm) {
 		Toy_String* key = Toy_createStringLength(&(vm->memoryBucket), callbackPairs[i].name, strlen(callbackPairs[i].name));
 		Toy_Function* fn = Toy_createFunctionFromCallback(&(vm->memoryBucket), callbackPairs[i].callback);
 
-		Toy_declareScope(vm->scope, key, TOY_VALUE_FUNCTION, TOY_VALUE_FROM_FUNCTION(fn), true);
+		Toy_declareScope(&vm->memoryBucket, vm->scope, key, TOY_VALUE_FUNCTION, TOY_VALUE_FROM_FUNCTION(fn), true);
 
 		Toy_freeString(key);
 	}
@@ -349,7 +349,7 @@ void initTerrainReadOnlyAPI(Toy_VM* vm) {
 		Toy_String* key = Toy_createStringLength(&(vm->memoryBucket), readOnlyLockPairs[i].name, strlen(readOnlyLockPairs[i].name));
 		Toy_Function* fn = Toy_createFunctionFromCallback(&(vm->memoryBucket), readOnlyLockPairs[i].callback);
 
-		Toy_declareScope(vm->scope, key, TOY_VALUE_FUNCTION, TOY_VALUE_FROM_FUNCTION(fn), true);
+		Toy_declareScope(&vm->memoryBucket, vm->scope, key, TOY_VALUE_FUNCTION, TOY_VALUE_FROM_FUNCTION(fn), true);
 
 		Toy_freeString(key);
 	}

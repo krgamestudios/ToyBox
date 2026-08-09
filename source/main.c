@@ -270,9 +270,9 @@ static CallbackPairs callbackPairs[] = {
 };
 
 //quick and dirty template for each opaque object
-#define DECLARE_OPAQUE(NAME, DATAPTR, SCOPE, BUCKETHANDLE) { \
+#define DECLARE_OPAQUE(BUCKETHANDLE, SCOPE, NAME, DATAPTR) { \
 	Toy_String* name = Toy_toString(BUCKETHANDLE, NAME); \
-	Toy_declareScope(SCOPE, name, TOY_VALUE_OPAQUE, TOY_OPAQUE_FROM_POINTER(DATAPTR), true); \
+	Toy_declareScope(BUCKETHANDLE, SCOPE, name, TOY_VALUE_OPAQUE, TOY_OPAQUE_FROM_POINTER(DATAPTR), true); \
 	Toy_freeString(name); \
 }
 
@@ -286,7 +286,7 @@ void initEngineAPI(Toy_VM* vm) {
 	for (int i = 0; callbackPairs[i].name; i++) {
 		Toy_String* key = Toy_createStringLength(&(vm->memoryBucket), callbackPairs[i].name, strlen(callbackPairs[i].name));
 		Toy_Function* fn = Toy_createFunctionFromCallback(&(vm->memoryBucket), callbackPairs[i].callback);
-		Toy_declareScope(vm->scope, key, TOY_VALUE_FUNCTION, TOY_VALUE_FROM_FUNCTION(fn), true);
+		Toy_declareScope(&vm->memoryBucket, vm->scope, key, TOY_VALUE_FUNCTION, TOY_VALUE_FROM_FUNCTION(fn), true);
 		Toy_freeString(key);
 	}
 
@@ -301,13 +301,13 @@ void initGameAPI(Toy_VM* vm) {
 
 	Toy_setOpaqueAttributeHandler(dispatchOpaqueAttributes);
 
-	DECLARE_OPAQUE("Keyboard", &keyboardData, vm->scope, &vm->memoryBucket);
-	DECLARE_OPAQUE("KeyPressed", &keyPressedData, vm->scope, &vm->memoryBucket);
-	DECLARE_OPAQUE("KeyReleased", &keyReleasedData, vm->scope, &vm->memoryBucket);
+	DECLARE_OPAQUE(&vm->memoryBucket, vm->scope, "Keyboard", &keyboardData);
+	DECLARE_OPAQUE(&vm->memoryBucket, vm->scope, "KeyPressed", &keyPressedData);
+	DECLARE_OPAQUE(&vm->memoryBucket, vm->scope, "KeyReleased", &keyReleasedData);
 
-	DECLARE_OPAQUE("Mouse", &mouseData, vm->scope, &vm->memoryBucket);
-	DECLARE_OPAQUE("MousePressed", &mousePressedData, vm->scope, &vm->memoryBucket);
-	DECLARE_OPAQUE("MouseReleased", &mouseReleasedData, vm->scope, &vm->memoryBucket);
+	DECLARE_OPAQUE(&vm->memoryBucket, vm->scope, "Mouse", &mouseData);
+	DECLARE_OPAQUE(&vm->memoryBucket, vm->scope, "MousePressed", &mousePressedData);
+	DECLARE_OPAQUE(&vm->memoryBucket, vm->scope, "MouseReleased", &mouseReleasedData);
 
 	initTerrainReadOnlyAPI(vm);
 }
