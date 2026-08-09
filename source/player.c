@@ -21,7 +21,8 @@ void freePlayer(Player* player) {
     }
 
     //TODO: do any cleanup needed
+    Toy_VM vm = player->vm; //take ownership away from the player object
 
     //this will also free the player's allocated memory within the bucket
-    Toy_freeVM(&player->vm);
+    Toy_freeVM(&vm);
 }
