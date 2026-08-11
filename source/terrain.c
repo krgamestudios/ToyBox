@@ -453,8 +453,6 @@ static void attr_terrainGetTile(Toy_VM* vm, Toy_FunctionNative* self) {
 }
 
 Toy_Value handleTerrainAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attribute) {
-    (void)vm;
-
     Terrain* terrain = (Terrain*)TOY_VALUE_AS_OPAQUE(compound);
 
     //the attribute we're looking for

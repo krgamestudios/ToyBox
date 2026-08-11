@@ -12,6 +12,7 @@
 #include "mouse.h"
 #include "terrain.h"
 #include "tileset.h"
+#include "creep.h"
 #include "player.h"
 
 #include "standard_library.h"
@@ -250,6 +251,9 @@ Toy_Value dispatchOpaqueAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value att
 
 		case OPAQUE_TERRAIN:
 			return handleTerrainAttributes(vm, compound, attribute);
+
+		case OPAQUE_CREEP:
+			return handleCreepAttributes(vm, compound, attribute);
 	}
 
 	//only reached on error
