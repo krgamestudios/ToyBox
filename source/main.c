@@ -314,6 +314,7 @@ void initGameAPI(Toy_VM* vm) {
 	DECLARE_OPAQUE(&vm->memoryBucket, vm->scope, "MouseReleased", &mouseReleasedData);
 
 	initTerrainReadOnlyAPI(vm);
+	initCreepAPI(vm);
 }
 
 //util for finding and loading all players

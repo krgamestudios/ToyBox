@@ -10,9 +10,39 @@
 #define CSTR_MATCH(FIRST, SECOND) (strlen(FIRST) == strlen(SECOND) && strcmp(FIRST, SECOND) == 0)
 
 static void api_createCreep(Toy_VM* vm, Toy_FunctionNative* self) {
-    //TODO: implement this
-    (void)vm;
-    (void)self;
+	//TODO: store this creep within the Player
+	(void)self;
+
+	//check parameter count
+	if (vm->stack->count < 2) {
+		char buffer[256];
+		snprintf(buffer, 256, "Not enough parameters found in 'CreateCreep()'");
+		Toy_error(buffer);
+		return;
+	}
+
+	Toy_Value y = Toy_popStack(&vm->stack);
+	Toy_Value x = Toy_popStack(&vm->stack);
+
+	if (!TOY_VALUE_IS_INTEGER(x) || !TOY_VALUE_IS_INTEGER(y)) {
+		char buffer[256];
+		snprintf(buffer, 256, "Bad argument types found in CreateCreep() (expected 'Int' and 'Int',  found '%s' and '%s')", Toy_getValueTypeAsCString(x.type), Toy_getValueTypeAsCString(y.type));
+		Toy_error(buffer);
+		Toy_freeValue(x);
+		Toy_freeValue(y);
+		return;
+	}
+
+	//allocate space for a value and a creep
+	Creep* creep = (Creep*)Toy_partitionBucket(&vm->memoryBucket, sizeof(Creep));
+
+	(*creep) = (Creep){
+		.type = OPAQUE_CREEP,
+		.position = (Vector2){ .x = TOY_VALUE_AS_INTEGER(x), .y = TOY_VALUE_AS_INTEGER(y)}
+	};
+
+	//TODO: I need a global 'nullptr' for references/opaques?
+	Toy_pushStack(&vm->stack, TOY_OPAQUE_FROM_POINTER(creep));
 }
 
 //callback utils
@@ -27,7 +57,7 @@ static CallbackPairs callbackPairs[] = {
 };
 
 void initCreepAPI(Toy_VM* vm) {
-    if (vm == NULL || vm->scope == NULL || vm->memoryBucket == NULL) {
+	if (vm == NULL || vm->scope == NULL || vm->memoryBucket == NULL) {
 		fprintf(stderr, TOY_CC_ERROR "ERROR: Can't initialize the creep API, exiting\n" TOY_CC_RESET);
 		exit(-1);
 	}
@@ -61,9 +91,9 @@ static void attr_creepSetX(Toy_VM* vm, Toy_FunctionNative* self) {
 
 	if (!TOY_VALUE_IS_INTEGER(x)) {
 		char buffer[256];
-		snprintf(buffer, 256, "Bad argument type in Creep.setX() (expected 'Int' found '%s')", Toy_getValueTypeAsCString(x.type));
+		snprintf(buffer, 256, "Bad argument type found in Creep.setX() (expected 'Int' found '%s')", Toy_getValueTypeAsCString(x.type));
 		Toy_error(buffer);
-        Toy_freeValue(x);
+		Toy_freeValue(x);
 		return;
 	}
 
@@ -87,9 +117,9 @@ static void attr_creepSetY(Toy_VM* vm, Toy_FunctionNative* self) {
 
 	if (!TOY_VALUE_IS_INTEGER(y)) {
 		char buffer[256];
-		snprintf(buffer, 256, "Bad argument type in Creep.setY() (expected 'Int' found '%s')", Toy_getValueTypeAsCString(y.type));
+		snprintf(buffer, 256, "Bad argument type found in Creep.setY() (expected 'Int' found '%s')", Toy_getValueTypeAsCString(y.type));
 		Toy_error(buffer);
-        Toy_freeValue(y);
+		Toy_freeValue(y);
 		return;
 	}
 
@@ -98,9 +128,33 @@ static void attr_creepSetY(Toy_VM* vm, Toy_FunctionNative* self) {
 }
 
 static void attr_creepDestroy(Toy_VM* vm, Toy_FunctionNative* self) {
-    //TODO: implement this
-    (void)vm;
-    (void)self;
+	(void)self;
+
+	//check parameter count
+	if (vm->stack->count < 1) {
+		char buffer[256];
+		snprintf(buffer, 256, "Not enough parameters found in 'Creep.destroy()'");
+		Toy_error(buffer);
+		return;
+	}
+
+	Toy_Value compound = Toy_popStack(&vm->stack);
+
+	if (!TOY_VALUE_IS_OPAQUE(compound)) {
+		char buffer[256];
+		snprintf(buffer, 256, "Bad argument type found in Creep.destroy() (expected 'Opaque' found '%s')", Toy_getValueTypeAsCString(compound.type));
+		Toy_error(buffer);
+		Toy_freeValue(compound);
+		return;
+	}
+
+	Creep* creep = TOY_VALUE_AS_OPAQUE(compound);
+	Toy_releaseBucketPartition((void*)creep);
+
+	//nullify the scoped variable
+	if (TOY_VALUE_IS_REFERENCE(compound)) {
+		(*TOY_VALUE_AS_REFERENCE(compound)) = TOY_VALUE_FROM_NULL();
+	}
 }
 
 Toy_Value handleCreepAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attribute) {

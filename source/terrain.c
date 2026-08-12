@@ -104,7 +104,7 @@ void api_unloadTerrain(Toy_VM* vm, Toy_FunctionNative* self) {
 	free(terrain);
 	if (TOY_VALUE_IS_REFERENCE(value)) {
 		terrainValue = TOY_VALUE_FROM_NULL(); //temp workaround
-	}
+	} //TODO: nullify scoped variable
 }
 
 void api_loadTerrain(Toy_VM* vm, Toy_FunctionNative* self) {
