@@ -15,7 +15,7 @@ static Toy_Value terrainValue = {0};
 static bool terrainLocked = false;
 
 void api_createTerrain(Toy_VM* vm, Toy_FunctionNative* self) {
-    //width, height -> Opaque(Terrain)
+	//width, height -> Opaque(Terrain)
 	(void)self;
 
 	if (terrainLocked) {
@@ -291,7 +291,7 @@ static CallbackPairs callbackPairs[] = {
 };
 
 void initTerrainAPI(Toy_VM* vm) {
-    if (vm == NULL || vm->scope == NULL || vm->memoryBucket == NULL) {
+	if (vm == NULL || vm->scope == NULL || vm->memoryBucket == NULL) {
 		fprintf(stderr, TOY_CC_ERROR "ERROR: Can't initialize the terrain API, exiting\n" TOY_CC_RESET);
 		exit(-1);
 	}
@@ -453,9 +453,9 @@ static void attr_terrainGetTile(Toy_VM* vm, Toy_FunctionNative* self) {
 }
 
 Toy_Value handleTerrainAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attribute) {
-    Terrain* terrain = (Terrain*)TOY_VALUE_AS_OPAQUE(compound);
+	Terrain* terrain = (Terrain*)TOY_VALUE_AS_OPAQUE(compound);
 
-    //the attribute we're looking for
+	//the attribute we're looking for
 	Toy_String* string = TOY_VALUE_AS_STRING(attribute);
 	const char* cstr = string->leaf.data;
 

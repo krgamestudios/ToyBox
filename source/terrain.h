@@ -4,10 +4,10 @@
 #include "toy_vm.h"
 
 typedef struct Terrain {
-    OpaqueType type;
-    unsigned int width;
-    unsigned int height;
-    unsigned int data[];
+	OpaqueType type;
+	unsigned int width;
+	unsigned int height;
+	unsigned int data[];
 } Terrain;
 
 void initTerrainAPI(Toy_VM* vm);

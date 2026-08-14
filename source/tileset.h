@@ -3,9 +3,9 @@
 #include "raylib.h"
 
 typedef struct Tileset {
-    Texture2D texture;
-    unsigned int tileWidth;
-    unsigned int tileHeight;
+	Texture2D texture;
+	unsigned int tileWidth;
+	unsigned int tileHeight;
 } Tileset;
 
 Tileset loadTileset(const char* filename, unsigned int tileWidth, unsigned int tileHeight);

@@ -3,7 +3,7 @@
 #include "toy_vm.h"
 
 typedef struct Player {
-    Toy_VM vm;
+	Toy_VM vm;
 } Player;
 
 Player* allocatePlayer();
