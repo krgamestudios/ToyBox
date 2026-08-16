@@ -2,10 +2,9 @@ print "hello link";
 
 if (Keyboard.SPACE) print "Hyah!";
 
+
+//testing the creeps
 var creep = CreateCreep(0,0);
-
 print creep;
-
 creep.destroy();
-
 print creep;

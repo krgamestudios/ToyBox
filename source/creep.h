@@ -9,6 +9,6 @@ typedef struct Creep {
 	Vector2 position;
 } Creep;
 
-void initCreepAPI(Toy_VM* vm);
+//void initCreepAPI(Toy_VM* vm);
 
 Toy_Value handleCreepAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attribute);
