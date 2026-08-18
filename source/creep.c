@@ -61,36 +61,6 @@ static void attr_creepSetY(Toy_VM* vm, Toy_FunctionNative* self) {
 	creep->position.y = TOY_VALUE_AS_INTEGER(y);
 }
 
-static void attr_creepDestroy(Toy_VM* vm, Toy_FunctionNative* self) {
-	(void)self;
-
-	//check parameter count
-	if (vm->stack->count < 1) {
-		char buffer[256];
-		snprintf(buffer, 256, "Not enough parameters found in 'Creep.destroy()'");
-		Toy_error(buffer);
-		return;
-	}
-
-	Toy_Value compound = Toy_popStack(&vm->stack);
-
-	if (!TOY_VALUE_IS_OPAQUE(compound)) {
-		char buffer[256];
-		snprintf(buffer, 256, "Bad argument type found in Creep.destroy() (expected 'Opaque' found '%s')", Toy_getValueTypeAsCString(compound.type));
-		Toy_error(buffer);
-		Toy_freeValue(compound);
-		return;
-	}
-
-	Creep* creep = TOY_VALUE_AS_OPAQUE(compound);
-	Toy_releaseBucketPartition((void*)creep);
-
-	//nullify the scoped variable
-	if (TOY_VALUE_IS_REFERENCE(compound)) {
-		(*TOY_VALUE_AS_REFERENCE(compound)) = TOY_VALUE_FROM_NULL();
-	}
-}
-
 Toy_Value handleCreepAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attribute) {
 	Creep* creep = (Creep*)TOY_VALUE_AS_OPAQUE(compound);
 
@@ -110,10 +80,6 @@ Toy_Value handleCreepAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attrib
 	}
 	else if (CSTR_MATCH(cstr, "setY")) {
 		Toy_Function* fn = Toy_createFunctionFromCallback(&vm->memoryBucket, attr_creepSetY);
-		return TOY_VALUE_FROM_FUNCTION(fn);
-	}
-	else if (CSTR_MATCH(cstr, "destroy")) {
-		Toy_Function* fn = Toy_createFunctionFromCallback(&vm->memoryBucket, attr_creepDestroy);
 		return TOY_VALUE_FROM_FUNCTION(fn);
 	}
 	else {

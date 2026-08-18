@@ -14,4 +14,4 @@ Player* allocatePlayer();
 void bindBytecodeToPlayer(Player* player, unsigned char* bytecode);
 void freePlayer(Player*);
 
-void initPlayerAPI(Toy_VM* vm);
+void initPlayerAPI(Toy_VM* vm, Player* player);

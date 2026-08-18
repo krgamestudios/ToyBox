@@ -6,9 +6,8 @@
 
 typedef struct Creep {
 	OpaqueType type;
+	bool active;
 	Vector2 position;
 } Creep;
-
-//void initCreepAPI(Toy_VM* vm);
 
 Toy_Value handleCreepAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attribute);

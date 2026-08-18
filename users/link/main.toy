@@ -4,7 +4,15 @@ if (Keyboard.SPACE) print "Hyah!";
 
 
 //testing the creeps
-var creep = CreateCreep(0,0);
-print creep;
-creep.destroy();
-print creep;
+var creep1 = CreateCreep(0,0);
+var creep2 = CreateCreep(0,0);
+var creep3 = CreateCreep(0,0);
+print creep1;
+print creep2;
+print creep3;
+DestroyCreep(creep2);
+DestroyCreep(creep3);
+DestroyCreep(creep1);
+print creep1;
+print creep2;
+print creep3;

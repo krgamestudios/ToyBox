@@ -1,5 +1,4 @@
-print "Hello zelda";
+//print "Hello zelda";
 
 if (Keyboard.SPACE) print "Yay!";
 
-var terrain = GetTerrain();

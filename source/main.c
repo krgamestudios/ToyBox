@@ -297,7 +297,7 @@ void initEngineAPI(Toy_VM* vm) {
 	initTerrainAPI(vm);
 }
 
-void initGameAPI(Toy_VM* vm) {
+void initGameAPI(Toy_VM* vm, Player* player) {
 	if (vm == NULL || vm->scope == NULL || vm->memoryBucket == NULL) {
 		fprintf(stderr, TOY_CC_ERROR "ERROR: Can't initialize game API, exiting\n" TOY_CC_RESET);
 		exit(-1);
@@ -314,7 +314,7 @@ void initGameAPI(Toy_VM* vm) {
 	DECLARE_OPAQUE(&vm->memoryBucket, vm->scope, "MouseReleased", &mouseReleasedData);
 
 	initTerrainReadOnlyAPI(vm);
-	initPlayerAPI(vm);
+	initPlayerAPI(vm, player);
 }
 
 //util for finding and loading all players
@@ -352,7 +352,7 @@ Player** loadPlayers(int* playerArraySize) {
 			bindBytecodeToPlayer(playerArrayHandle[*playerArraySize], code);
 
 			initStandardLibrary(&(playerArrayHandle[*playerArraySize])->vm);
-			initGameAPI(&(playerArrayHandle[*playerArraySize])->vm);
+			initGameAPI(&(playerArrayHandle[*playerArraySize])->vm, playerArrayHandle[*playerArraySize]);
 
 			(*playerArraySize)++;
 		}
@@ -416,7 +416,7 @@ int main(int argc, const char* argv[]) {
 	//initialize the libraries
 	initStandardLibrary(&vm);
 	initEngineAPI(&vm);
-	initGameAPI(&vm);
+	initGameAPI(&vm, NULL);
 
 	Toy_runVM(&vm);
 
