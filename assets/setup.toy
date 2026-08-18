@@ -1,8 +1,6 @@
 InitScreen(1080, 720, "Bottle Battle");
 
 var terrain = LoadTerrain();
-print terrain;
-
 if (terrain == null) {
 	terrain = CreateTerrain(40, 40);
 

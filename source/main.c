@@ -369,6 +369,18 @@ void freePlayers(Player** playerArrayHandle, int* playerArraySize) {
 	*playerArraySize = 0;
 }
 
+void drawCreeps(Creep* array, unsigned int capacity, Texture2D sprite) {
+	for (unsigned int i = 0; i < capacity; i++) {
+		//printf("%d\n", i);
+		if (array[i].active) {
+			//NOTE: multiplied by tile size
+		//	printf("draw");
+			DrawTexture(sprite, array[i].position.x * 16, array[i].position.y * 16, WHITE);
+		}
+		//printf("\n");
+	}
+}
+
 //main file
 int main(int argc, const char* argv[]) {
 	//not necessary, but nice to have
@@ -428,6 +440,7 @@ int main(int argc, const char* argv[]) {
 
 	//load graphical assets
 	Tileset tileset = loadTileset("assets/terrain.png", 16, 16);
+	Texture2D creepSprite = LoadTexture("assets/Creep_full.png");
 
 	//load players
 	int playerArraySize = 0;
@@ -474,6 +487,9 @@ int main(int argc, const char* argv[]) {
 		}
 
 		//TODO: draw bots
+		for (int i = 0; i < playerArraySize; i++) {
+			drawCreeps(playerArrayHandle[i]->creeps, playerArrayHandle[i]->creepCapacity, creepSprite);
+		}
 
 		if (verbose) {
 			DrawFPS(0,0);
@@ -499,6 +515,7 @@ int main(int argc, const char* argv[]) {
 	Toy_freeVM(&vm);
 	free(entryCode);
 
+	UnloadTexture(creepSprite);
 	unloadTileset(tileset);
 
 	if (IsWindowReady()) {

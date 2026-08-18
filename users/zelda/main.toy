@@ -1,4 +1,3 @@
 //print "Hello zelda";
-
-if (Keyboard.SPACE) print "Yay!";
-
+//
+//if (Keyboard.SPACE) print "Yay!";

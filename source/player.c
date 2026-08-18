@@ -101,6 +101,70 @@ static void api_destroyCreep(Toy_VM* vm, Toy_FunctionNative* self) {
 	}
 }
 
+static void api_getCreepCount(Toy_VM* vm, Toy_FunctionNative* self) {
+	//the player object
+	void* ptr = (void*)(&self->meta1);
+	Player* player = *((Player**)ptr);
+	Toy_pushStack(&vm->stack, TOY_VALUE_FROM_INTEGER(player->creepCount));
+}
+
+static void api_getCreepIndex(Toy_VM* vm, Toy_FunctionNative* self) {
+	if (vm->stack->count < 1) {
+		char buffer[256];
+		snprintf(buffer, 256, "Not enough parameters found in 'GetCreepIndex()'");
+		Toy_error(buffer);
+		Toy_pushStack(&vm->stack, TOY_VALUE_FROM_NULL());
+		return;
+	}
+
+	Toy_Value value = Toy_popStack(&vm->stack);
+
+	if (!TOY_VALUE_IS_INTEGER(value)) {
+		char buffer[256];
+		snprintf(buffer, 256, "Bad argument types found in GetCreepIndex() (expected 'Int',  found '%s')", Toy_getValueTypeAsCString(value.type));
+		Toy_error(buffer);
+		Toy_freeValue(value);
+		Toy_pushStack(&vm->stack, TOY_VALUE_FROM_NULL());
+		return;
+	}
+
+	int index = TOY_VALUE_AS_INTEGER(value);
+
+	//the player object
+	void* ptr = (void*)(&self->meta1);
+	Player* player = *((Player**)ptr);
+
+	if (index < 0 || index >= (int)player->creepCount) {
+		char buffer[256];
+		snprintf(buffer, 256, "Bad argument value found in GetCreepIndex(), %d is out of range", index);
+		Toy_error(buffer);
+		Toy_pushStack(&vm->stack, TOY_VALUE_FROM_NULL());
+		return;
+	}
+
+	//find the creep, skipping tombstones, returning null if not found
+	Creep* creep = NULL;
+	for (unsigned int i = 0; i < player->creepCapacity; i++) {
+		if (player->creeps[i].active != true) {
+			continue;
+		}
+		if (index == 0) {
+			creep = &player->creeps[i];
+			break;
+		}
+		index--;
+	}
+
+	if (creep == NULL) {
+		Toy_pushStack(&vm->stack, TOY_VALUE_FROM_NULL());
+	}
+	else {
+		//finally, push the correct one and return
+		Toy_pushStack(&vm->stack, TOY_OPAQUE_FROM_POINTER(creep));
+	}
+
+}
+
 //callback utils
 typedef struct CallbackPairs {
 	const char* name;
@@ -110,6 +174,8 @@ typedef struct CallbackPairs {
 static CallbackPairs callbackPairs[] = {
 	{"CreateCreep", api_createCreep},
 	{"DestroyCreep", api_destroyCreep},
+	{"GetCreepCount", api_getCreepCount},
+	{"GetCreepIndex", api_getCreepIndex},
 	{NULL, NULL},
 };
 

@@ -1,18 +1,30 @@
-print "hello link";
-
-if (Keyboard.SPACE) print "Hyah!";
+//print "hello link";
 
 
-//testing the creeps
-var creep1 = CreateCreep(0,0);
-var creep2 = CreateCreep(0,0);
-var creep3 = CreateCreep(0,0);
-print creep1;
-print creep2;
-print creep3;
-DestroyCreep(creep2);
-DestroyCreep(creep3);
-DestroyCreep(creep1);
-print creep1;
-print creep2;
-print creep3;
+
+if (KeyPressed.SPACE && GetCreepCount() < 8) {
+	var terrain = GetTerrain();
+
+	//try and find a good spawn point
+	var x = 0;
+	var y = 0;
+
+	for (var i = 0; i < 100; i++) {
+		x = abs(rand()) % terrain.width;
+		y = abs(rand()) % terrain.height;
+
+		if (terrain.getTile(x, y) == 0) { //empty and useable
+			CreateCreep(x, y);
+			break;
+		}
+	}
+}
+
+
+if (KeyPressed.ENTER) {
+	for (var i = 0; i < GetCreepCount(); i++) {
+		var creep = GetCreepIndex(i);
+
+		creep.setX(creep.x + 1);
+	}
+}
