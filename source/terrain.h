@@ -15,4 +15,6 @@ void initTerrainReadOnlyAPI(Toy_VM* vm);
 
 Toy_Value handleTerrainAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attribute);
 
+//utils for managing the terrain from C
 Terrain* getTerrainPtr();
+unsigned int getTerrainTile(Terrain* terrain, int x, int y);

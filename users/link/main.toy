@@ -1,7 +1,3 @@
-//print "hello link";
-
-
-
 if (KeyPressed.SPACE && GetCreepCount() < 8) {
 	var terrain = GetTerrain();
 
@@ -20,11 +16,15 @@ if (KeyPressed.SPACE && GetCreepCount() < 8) {
 	}
 }
 
+//if (KeyPressed.ENTER) {
+//	for (var i = 0; i < GetCreepCount(); i++) {
+//		var creep = GetCreepIndex(i);
+//		creep.move(Direction.EAST);
+//	}
+//}
 
-if (KeyPressed.ENTER) {
-	for (var i = 0; i < GetCreepCount(); i++) {
-		var creep = GetCreepIndex(i);
 
-		creep.setX(creep.x + 1);
-	}
+for (var i = 0; i < GetCreepCount(); i++) {
+	var creep = GetCreepIndex(i);
+	creep.move(abs(rand()) % 9);
 }

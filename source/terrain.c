@@ -491,3 +491,13 @@ Terrain* getTerrainPtr() {
 		return NULL;
 	}
 }
+
+unsigned int getTerrainTile(Terrain* terrain, int x, int y) {
+	//check args
+	if (!terrain || x < 0 || y < 0 || (unsigned int)x >= terrain->width || (unsigned int)y >= terrain->height) {
+		fprintf(stderr, TOY_CC_ERROR "Tile coordinates (%d, %d) out of bounds in 'getTerrainTile()'" TOY_CC_RESET "\n", x, y);
+		return -1;
+	}
+
+	return terrain->data[y * terrain->width + x];
+}

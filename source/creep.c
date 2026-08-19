@@ -2,6 +2,9 @@
 
 #include "toy_console_colors.h"
 
+#include "direction.h"
+#include "terrain.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -61,6 +64,47 @@ static void attr_creepSetY(Toy_VM* vm, Toy_FunctionNative* self) {
 	creep->position.y = TOY_VALUE_AS_INTEGER(y);
 }
 
+static void attr_creepMove(Toy_VM* vm, Toy_FunctionNative* self) {
+	(void)self;
+
+	//check parameter count
+	if (vm->stack->count < 2) {
+		char buffer[256];
+		snprintf(buffer, 256, "Not enough parameters found in 'Creep.move()'");
+		Toy_error(buffer);
+		return;
+	}
+
+	Toy_Value compound = Toy_popStack(&vm->stack);
+	Toy_Value value = Toy_popStack(&vm->stack);
+
+	if (!TOY_VALUE_IS_INTEGER(value)) {
+		char buffer[256];
+		snprintf(buffer, 256, "Bad argument type found in Creep.move() (expected 'Int' found '%s')", Toy_getValueTypeAsCString(value.type));
+		Toy_error(buffer);
+		Toy_freeValue(value);
+		return;
+	}
+
+	Creep* creep = (Creep*)TOY_VALUE_AS_OPAQUE(compound);
+	Direction dir = (Direction)TOY_VALUE_AS_INTEGER(value);
+	Terrain* terrain = getTerrainPtr();
+
+	#define VECTOR_ADD(V, X, Y) if (getTerrainTile(terrain, (V).x + X, (V).y + Y) == 0) {(V).x += X; (V).y += Y;}
+	switch (dir) {
+		case NONE: break; //no op
+		case NORTH:		VECTOR_ADD(creep->position,  0, -1); break;
+		case NORTHEAST:	VECTOR_ADD(creep->position,  1, -1); break;
+		case EAST:		VECTOR_ADD(creep->position,  1,  0); break;
+		case SOUTHEAST:	VECTOR_ADD(creep->position,  1,  1); break;
+		case SOUTH:		VECTOR_ADD(creep->position,  0,  1); break;
+		case SOUTHWEST:	VECTOR_ADD(creep->position, -1,  1); break;
+		case WEST:		VECTOR_ADD(creep->position, -1,  0); break;
+		case NORTHWEST:	VECTOR_ADD(creep->position, -1, -1); break;
+	}
+	#undef VECTOR_ADD
+}
+
 Toy_Value handleCreepAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attribute) {
 	Creep* creep = (Creep*)TOY_VALUE_AS_OPAQUE(compound);
 
@@ -80,6 +124,10 @@ Toy_Value handleCreepAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attrib
 	}
 	else if (CSTR_MATCH(cstr, "setY")) {
 		Toy_Function* fn = Toy_createFunctionFromCallback(&vm->memoryBucket, attr_creepSetY);
+		return TOY_VALUE_FROM_FUNCTION(fn);
+	}
+	else if (CSTR_MATCH(cstr, "move")) {
+		Toy_Function* fn = Toy_createFunctionFromCallback(&vm->memoryBucket, attr_creepMove);
 		return TOY_VALUE_FROM_FUNCTION(fn);
 	}
 	else {
