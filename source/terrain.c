@@ -100,11 +100,12 @@ void api_unloadTerrain(Toy_VM* vm, Toy_FunctionNative* self) {
 		return;
 	}
 
+	//free terrain and nullify value
 	Terrain* terrain = TOY_VALUE_AS_OPAQUE(value);
 	free(terrain);
 	if (TOY_VALUE_IS_REFERENCE(value)) {
-		terrainValue = TOY_VALUE_FROM_NULL(); //temp workaround
-	} //TODO: nullify scoped variable
+		terrainValue = TOY_VALUE_FROM_NULL();
+	}
 }
 
 void api_loadTerrain(Toy_VM* vm, Toy_FunctionNative* self) {
@@ -117,7 +118,7 @@ void api_loadTerrain(Toy_VM* vm, Toy_FunctionNative* self) {
 		return;
 	}
 
-	//BUGFIX: first, check if the terrain exists
+	//check if the terrain exists
 	{
 		sqlite3_stmt* stmt;
 		sqlite3_prepare(

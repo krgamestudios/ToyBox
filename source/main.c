@@ -10,6 +10,7 @@
 
 #include "keyboard.h"
 #include "mouse.h"
+#include "direction.h"
 #include "terrain.h"
 #include "tileset.h"
 #include "creep.h"
@@ -249,6 +250,9 @@ Toy_Value dispatchOpaqueAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value att
 		case OPAQUE_MOUSE_RELEASED:
 			return handleMouseAttributes(vm, compound, attribute);
 
+		case OPAQUE_DIRECTION:
+			return handleDirectionAttributes(vm, compound, attribute);
+
 		case OPAQUE_TERRAIN:
 			return handleTerrainAttributes(vm, compound, attribute);
 
@@ -269,7 +273,7 @@ typedef struct CallbackPairs {
 
 static CallbackPairs callbackPairs[] = {
 	{"InitScreen", api_initScreen},
-	{"InitLoop", api_initLoop}, //TODO: remove this, or leave it for debugging?
+	{"InitLoop", api_initLoop},
 	{NULL, NULL},
 };
 
@@ -312,6 +316,8 @@ void initGameAPI(Toy_VM* vm, Player* player) {
 	DECLARE_OPAQUE(&vm->memoryBucket, vm->scope, "Mouse", &mouseData);
 	DECLARE_OPAQUE(&vm->memoryBucket, vm->scope, "MousePressed", &mousePressedData);
 	DECLARE_OPAQUE(&vm->memoryBucket, vm->scope, "MouseReleased", &mouseReleasedData);
+
+	DECLARE_OPAQUE(&vm->memoryBucket, vm->scope, "Direction", &directionData);
 
 	initTerrainReadOnlyAPI(vm);
 	initPlayerAPI(vm, player);
@@ -486,7 +492,7 @@ int main(int argc, const char* argv[]) {
 			drawDataWithTileset(tileset, terrain->width, terrain->height, terrain->data);
 		}
 
-		//TODO: draw bots
+		//draw bots
 		for (int i = 0; i < playerArraySize; i++) {
 			drawCreeps(playerArrayHandle[i]->creeps, playerArrayHandle[i]->creepCapacity, creepSprite);
 		}
