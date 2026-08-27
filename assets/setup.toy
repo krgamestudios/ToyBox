@@ -1,4 +1,5 @@
 InitScreen(1080, 720, "Bottle Battle");
+srand(time()); //TODO: remove 'srand' from the user scripts
 
 var terrain = LoadTerrain();
 if (terrain == null) {
