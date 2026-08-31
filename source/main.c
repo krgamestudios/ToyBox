@@ -75,12 +75,13 @@ unsigned char* readFile(const char* path, int* size) {
 	return buffer;
 }
 
-unsigned char* makeCodeFromSource(const char* source) {
+unsigned char* makeCodeFromSource(const char* source, const char* workingDir) {
 	Toy_Lexer lexer;
 	Toy_bindLexer(&lexer, source);
 
 	Toy_Parser parser;
 	Toy_bindParser(&parser, &lexer);
+	Toy_adjustParserWorkingDirectory(&parser, workingDir);
 
 	Toy_Bucket* bucket = Toy_allocateBucket(TOY_BUCKET_IDEAL);
 
@@ -136,7 +137,7 @@ static Toy_Function* onClose = NULL;
 static bool verbose = false;
 static bool uncappedFPS = false;
 
-//non-static members
+//extern members
 sqlite3* database = NULL;
 
 //engine API definitions
@@ -298,6 +299,18 @@ void initEngineAPI(Toy_VM* vm) {
 		Toy_freeString(key);
 	}
 
+	Toy_setOpaqueAttributeHandler(dispatchOpaqueAttributes);
+
+	DECLARE_OPAQUE(&vm->memoryBucket, vm->scope, "Keyboard", &keyboardData);
+	DECLARE_OPAQUE(&vm->memoryBucket, vm->scope, "KeyPressed", &keyPressedData);
+	DECLARE_OPAQUE(&vm->memoryBucket, vm->scope, "KeyReleased", &keyReleasedData);
+
+	DECLARE_OPAQUE(&vm->memoryBucket, vm->scope, "Mouse", &mouseData);
+	DECLARE_OPAQUE(&vm->memoryBucket, vm->scope, "MousePressed", &mousePressedData);
+	DECLARE_OPAQUE(&vm->memoryBucket, vm->scope, "MouseReleased", &mouseReleasedData);
+
+	DECLARE_OPAQUE(&vm->memoryBucket, vm->scope, "Direction", &directionData);
+
 	initTerrainAPI(vm);
 }
 
@@ -309,6 +322,7 @@ void initGameAPI(Toy_VM* vm, Player* player) {
 
 	Toy_setOpaqueAttributeHandler(dispatchOpaqueAttributes);
 
+	//TODO: remove player inputs
 	DECLARE_OPAQUE(&vm->memoryBucket, vm->scope, "Keyboard", &keyboardData);
 	DECLARE_OPAQUE(&vm->memoryBucket, vm->scope, "KeyPressed", &keyPressedData);
 	DECLARE_OPAQUE(&vm->memoryBucket, vm->scope, "KeyReleased", &keyReleasedData);
@@ -330,9 +344,9 @@ Player** loadPlayers(int* playerArraySize) {
 		return NULL;
 	}
 
-	DIR* dr = opendir("users");
+	DIR* dr = opendir("players");
 	if (dr == NULL) {
-		fprintf(stderr, TOY_CC_ERROR "Couldn't open the directory 'users'" TOY_CC_RESET "\n");
+		fprintf(stderr, TOY_CC_ERROR "Couldn't open the directory 'players'" TOY_CC_RESET "\n");
 		*playerArraySize = 0;
 		return NULL;
 	}
@@ -343,9 +357,11 @@ Player** loadPlayers(int* playerArraySize) {
 	struct dirent *de;
 	while ((de = readdir(dr)) != NULL && (*playerArraySize) < 8) {
 		if (de->d_type == DT_DIR) {
-			//build the path to the main file
+			//build the path to the main file & working directory
 			char mainfile[1024];
-			snprintf(mainfile, 1024, "users/%s/main.toy", de->d_name);
+			snprintf(mainfile, 1024, "players/%s/main.toy", de->d_name);
+			char workingDir[256];
+			Toy_private_getWorkingDir(workingDir, mainfile, 256);
 
 			//load & compile the player script
 			int size = 0;
@@ -353,7 +369,8 @@ Player** loadPlayers(int* playerArraySize) {
 			if (source == NULL) {
 				continue;
 			}
-			unsigned char* code = makeCodeFromSource(source);
+
+			unsigned char* code = makeCodeFromSource(source, workingDir);
 			playerArrayHandle[*playerArraySize] = allocatePlayer();
 			bindBytecodeToPlayer(playerArrayHandle[*playerArraySize], code);
 
@@ -377,13 +394,10 @@ void freePlayers(Player** playerArrayHandle, int* playerArraySize) {
 
 void drawCreeps(Creep* array, unsigned int capacity, Texture2D sprite) {
 	for (unsigned int i = 0; i < capacity; i++) {
-		//printf("%d\n", i);
 		if (array[i].active) {
 			//NOTE: multiplied by tile size
-		//	printf("draw");
 			DrawTexture(sprite, array[i].position.x * 16, array[i].position.y * 16, WHITE);
 		}
-		//printf("\n");
 	}
 }
 
@@ -411,12 +425,13 @@ int main(int argc, const char* argv[]) {
 
 	//run the setup script
 	int size = 0;
-	const char* source = (char*)readFile("assets/setup.toy", &size);
+	const char* setupFile = "assets/setup.toy";
+	const char* source = (char*)readFile(setupFile, &size);
 
 	if (!source) {
 		fprintf(stderr, TOY_CC_ERROR "File read error: " TOY_CC_RESET);
 		if (size == -1) {
-			fprintf(stderr, TOY_CC_ERROR "Couldn't find setup.toy\n" TOY_CC_RESET);
+			fprintf(stderr, TOY_CC_ERROR "Couldn't find %s\n" TOY_CC_RESET, setupFile);
 		}
 		else {
 			fprintf(stderr, TOY_CC_ERROR "Cause unknown\n" TOY_CC_RESET);
@@ -424,7 +439,9 @@ int main(int argc, const char* argv[]) {
 		return -1;
 	}
 
-	unsigned char* entryCode = makeCodeFromSource(source);
+	char workingDir[256];
+	Toy_private_getWorkingDir(workingDir, setupFile, 256);
+	unsigned char* entryCode = makeCodeFromSource(source, workingDir);
 
 	//build and run the VM with all the APIs
 	Toy_VM vm;
@@ -434,7 +451,6 @@ int main(int argc, const char* argv[]) {
 	//initialize the libraries
 	initStandardLibrary(&vm);
 	initEngineAPI(&vm);
-	initGameAPI(&vm, NULL);
 
 	Toy_runVM(&vm);
 
@@ -475,7 +491,7 @@ int main(int argc, const char* argv[]) {
 		//process player scripts
 		for (int i = 0; i < playerArraySize; i++) {
 			Toy_VM* pvm = &(playerArrayHandle[i])->vm;
-			pvm->scope = Toy_pushScope(&pvm->memoryBucket, pvm->scope); //this temporary scope lets users declare vars in the root of the file
+			pvm->scope = Toy_pushScope(&pvm->memoryBucket, pvm->scope); //this temporary scope lets players declare vars in the root of the file
 
 			Toy_runVM(pvm);
 

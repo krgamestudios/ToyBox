@@ -286,7 +286,7 @@ static CallbackPairs callbackPairs[] = {
 	{"UnloadTerrain", api_unloadTerrain},
 	{"LoadTerrain", api_loadTerrain},
 	{"SaveTerrain", api_saveTerrain},
-	// {"GetTerrain", api_getTerrain}, //accessed with 'initTerrainReadOnlyAPI'
+	{"GetTerrain", api_getTerrain},
 	{"SetTerrainLockState", api_setTerrainLockState},
 	{NULL, NULL},
 };

@@ -1,0 +1,32 @@
+//if no preexisting terrain is available, make some
+var terrain = LoadTerrain();
+
+if (terrain == null) {
+	terrain = CreateTerrain(40, 40);
+
+	//set up some "walls" along the edges
+	for (var i = 0; i < terrain.width; i++) {
+		terrain.setTile(i, 0, 1);
+		terrain.setTile(i, terrain.height - 1, 1);
+	}
+
+	for (var j = 0; j < terrain.height; j++) {
+		terrain.setTile(0, j, 1);
+		terrain.setTile(terrain.width - 1, j, 1);
+	}
+
+	//add some random obstacles
+	for (var _ = 0; _ < 15; _++) {
+		var x = abs(rand()) % 30 + 5;
+		var y = abs(rand()) % 30 + 5;
+
+		for (var i = 0; i < 3; i++) {
+			for (var j = 0; j < 3; j++) {
+				terrain.setTile(x + i, y + j, 1);
+			}
+		}
+	}
+}
+
+//pass this back to the calling script
+return terrain;

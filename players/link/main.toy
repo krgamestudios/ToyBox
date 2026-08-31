@@ -1,0 +1,10 @@
+if (KeyPressed.SPACE && GetCreepCount() < 8) {
+	import "spawn_creep.toy" as doTheCreep;
+	var creep = doTheCreep();
+}
+
+//DEBUG: move the creeps randomly
+for (var i = 0; i < GetCreepCount(); i++) {
+	var creep = GetCreepIndex(i);
+	creep.move(abs(rand()) % 9);
+}

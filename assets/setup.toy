@@ -1,34 +1,11 @@
+srand(time());
+
 InitScreen(1080, 720, "Bottle Battle");
-srand(time()); //TODO: remove 'srand' from the user scripts
+//InitLoop(null, null, null);
 
-var terrain = LoadTerrain();
-if (terrain == null) {
-	terrain = CreateTerrain(40, 40);
+import "terrain_default.toy" as terrain_default;
 
-	//set up some "walls" along the edges
-	for (var i = 0; i < terrain.width; i++) {
-		terrain.setTile(i, 0, 1);
-		terrain.setTile(i, terrain.height - 1, 1);
-	}
-
-	for (var j = 0; j < terrain.height; j++) {
-		terrain.setTile(0, j, 1);
-		terrain.setTile(terrain.width - 1, j, 1);
-	}
-
-	//add some random obstacles
-	for (var _ = 0; _ < 15; _++) {
-		var x = abs(rand()) % 30 + 5;
-		var y = abs(rand()) % 30 + 5;
-
-		for (var i = 0; i < 3; i++) {
-			for (var j = 0; j < 3; j++) {
-				terrain.setTile(x + i, y + j, 1);
-			}
-		}
-	}
-
-	SaveTerrain(terrain);
-}
+var terrain = terrain_default();
+//SaveTerrain(terrain);
 
 SetTerrainLockState(true);
