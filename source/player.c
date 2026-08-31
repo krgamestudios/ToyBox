@@ -207,7 +207,8 @@ Player* allocatePlayer() {
 	Toy_initVM(&vm);
 	Player* player = (Player*)Toy_partitionBucket(&vm.memoryBucket, sizeof(Player));
 	player->vm = vm;
-	player->creepCapacity = 8; //initial capacity
+	player->core = (Core){OPAQUE_CORE, (Vector2){0}};
+	player->creepCapacity = 8; //TODO: increase the number of useable creeps
 	player->creepCount = 0;
 	player->creeps = (Creep*)Toy_partitionBucket(&vm.memoryBucket, sizeof(Creep) * player->creepCapacity);
 	return player;

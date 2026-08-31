@@ -10,6 +10,15 @@ The gameplay takes place in a grid-based world with various procedurally generat
 
 # Mechanics
 
+A list of game objects/concepts players can control or fight for:
+
+* Core - the central hub of a player's forces, and the target for other players
+* Creeps - moveable units that can collect resources and fight other player's units
+* Source - Part of the terrain, used to produce energy
+* Energy - Consumed to produce new creeps, and other elements of the game
+
+# Scripting API
+
 For the time being, see `initEngineAPI` and `initGameAPI` for the APIs provided to `setup.toy` and the players, respectfully.
 
 See [toylang.com/](https://toylang.com/) for a short summary of the Toy langauge.

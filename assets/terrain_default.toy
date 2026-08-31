@@ -1,3 +1,51 @@
+//utils
+fn checkCoreBounds(arrayX, arrayY, length, posX, posY) {
+	for (var i = 0; i < length; i++) {
+		if (posX >= arrayX[i] - 1 &&
+			posX <= arrayX[i] + 1 &&
+			posY >= arrayY[i] - 1 &&
+			posY <= arrayY[i] + 1
+			)
+			return true;
+	}
+	return false;
+}
+
+fn placeCoreFlags(maxAttempts) {
+	for (var _ = 0; _ < maxAttempts; _++) {
+		//8 random locations
+		var x: Array = [abs(rand()) % terrain.width, abs(rand()) % terrain.width, abs(rand()) % terrain.width, abs(rand()) % terrain.width, abs(rand()) % terrain.width, abs(rand()) % terrain.width, abs(rand()) % terrain.width, abs(rand()) % terrain.width];
+		var y: Array = [abs(rand()) % terrain.height, abs(rand()) % terrain.height, abs(rand()) % terrain.height, abs(rand()) % terrain.height, abs(rand()) % terrain.height, abs(rand()) % terrain.height, abs(rand()) % terrain.height, abs(rand()) % terrain.height];
+
+		//check if terrain is free for each location
+		if (terrain.getTile(x[0], y[0]) != 0) continue;
+		if (terrain.getTile(x[1], y[1]) != 0) continue;
+		if (terrain.getTile(x[2], y[2]) != 0) continue;
+		if (terrain.getTile(x[3], y[3]) != 0) continue;
+		if (terrain.getTile(x[4], y[4]) != 0) continue;
+		if (terrain.getTile(x[5], y[5]) != 0) continue;
+		if (terrain.getTile(x[6], y[6]) != 0) continue;
+		if (terrain.getTile(x[7], y[7]) != 0) continue;
+
+		//check if cores are too close
+		var collision = false;
+		for (var col = 2; col < 8; col++) {
+			collision = collision || checkCoreBounds(x, y, col-1, x[col], y[col]);
+		}
+		if (collision) continue;
+
+		//etch these flags and return
+		for (var i = 0; i < 8; i++) {
+			terrain.setFlag(i, x[i], y[i]);
+		}
+		return true;
+	}
+	//failed
+	return null;
+}
+
+
+
 //if no preexisting terrain is available, make some
 var terrain = LoadTerrain();
 
@@ -26,6 +74,9 @@ if (terrain == null) {
 			}
 		}
 	}
+
+	//try and place 8 flags for player cores
+	assert placeCoreFlags(100), "Failed to place core flags in terrain";
 }
 
 //pass this back to the calling script

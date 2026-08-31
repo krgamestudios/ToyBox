@@ -1,13 +1,15 @@
 #pragma once
 
 #include "toy_vm.h"
+#include "core.h"
 #include "creep.h"
 
 typedef struct Player {
 	Toy_VM vm;
+	Core core;
+	Creep* creeps;
 	unsigned int creepCapacity;
 	unsigned int creepCount;
-	Creep* creeps;
 } Player;
 
 Player* allocatePlayer();

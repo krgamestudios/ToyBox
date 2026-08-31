@@ -64,6 +64,7 @@ void api_createTerrain(Toy_VM* vm, Toy_FunctionNative* self) {
 	terrain->type = OPAQUE_TERRAIN;
 	terrain->width = TOY_VALUE_AS_INTEGER(width);
 	terrain->height = TOY_VALUE_AS_INTEGER(height);
+	memset(terrain->flags, -1, sizeof(TerrainFlag) * TERRAIN_FLAG_TOTAL);
 	memset(terrain->data, 0, sizeof(unsigned int) * terrain->width * terrain->height);
 
 	//leave the reference on the stack
@@ -172,7 +173,8 @@ void api_loadTerrain(Toy_VM* vm, Toy_FunctionNative* self) {
 	terrain->width = width;
 	terrain->height = height;
 	if (terrain->width * terrain->height > 0) {
-		memcpy(terrain->data, (unsigned int*)sqlite3_column_blob(stmt, 3), sizeof(unsigned int) * terrain->width * terrain->height);
+		memcpy(terrain->flags, (unsigned int*)sqlite3_column_blob(stmt, 3), sizeof(TerrainFlag) * TERRAIN_FLAG_TOTAL);
+		memcpy(terrain->data, (unsigned int*)sqlite3_column_blob(stmt, 4), sizeof(unsigned int) * terrain->width * terrain->height);
 	}
 
 	sqlite3_finalize(stmt);
@@ -217,7 +219,7 @@ void api_saveTerrain(Toy_VM* vm, Toy_FunctionNative* self) {
 	sqlite3_stmt* stmt;
 	int rc = sqlite3_prepare(
 		database,
-		"INSERT OR REPLACE INTO terrain VALUES (?, ?, ?, ?);",
+		"INSERT OR REPLACE INTO terrain VALUES (?, ?, ?, ?, ?);",
 		-1,
 		&stmt,
 		NULL
@@ -233,7 +235,8 @@ void api_saveTerrain(Toy_VM* vm, Toy_FunctionNative* self) {
 	sqlite3_bind_int(stmt, 1, 1); //id
 	sqlite3_bind_int(stmt, 2, terrain->width); //width
 	sqlite3_bind_int(stmt, 3, terrain->height); //height
-	sqlite3_bind_blob(stmt, 4, terrain->data, terrain->width * terrain->height * sizeof(unsigned int), SQLITE_STATIC); //data
+	sqlite3_bind_blob(stmt, 4, terrain->flags, sizeof(TerrainFlag) * TERRAIN_FLAG_TOTAL, SQLITE_STATIC); //data
+	sqlite3_bind_blob(stmt, 5, terrain->data, sizeof(unsigned int) * terrain->width * terrain->height, SQLITE_STATIC); //data
 
 	//execute and finish
 	sqlite3_step(stmt);
@@ -311,7 +314,7 @@ void initTerrainAPI(Toy_VM* vm) {
 	sqlite3_stmt* stmt;
 	int rc = sqlite3_prepare(
 		database,
-		"CREATE TABLE IF NOT EXISTS terrain (id PRIMARY KEY ON CONFLICT REPLACE, width INTEGER, height INTEGER, data BLOB);",
+		"CREATE TABLE IF NOT EXISTS terrain (id PRIMARY KEY ON CONFLICT REPLACE, width INTEGER, height INTEGER, flags BLOB, data BLOB);",
 		-1,
 		&stmt,
 		NULL
@@ -453,6 +456,62 @@ static void attr_terrainGetTile(Toy_VM* vm, Toy_FunctionNative* self) {
 	Toy_pushStack(&vm->stack, value);
 }
 
+static void attr_terrainSetFlag(Toy_VM* vm, Toy_FunctionNative* self) {
+	(void)self;
+
+	if (terrainLocked) {
+		char buffer[256];
+		snprintf(buffer, 256, "Can't call 'Terrain.setFlag()' while terrain is locked");
+		Toy_error(buffer);
+		return;
+	}
+
+	//check parameter count
+	if (vm->stack->count < 4) {
+		char buffer[256];
+		snprintf(buffer, 256, "Not enough parameters found in 'Terrain.setFlag()'");
+		Toy_error(buffer);
+		return;
+	}
+
+	Toy_Value compound = Toy_popStack(&vm->stack);
+	Toy_Value y = Toy_popStack(&vm->stack);
+	Toy_Value x = Toy_popStack(&vm->stack);
+	Toy_Value index = Toy_popStack(&vm->stack);
+
+	Terrain* terrain = (Terrain*)TOY_VALUE_AS_OPAQUE(compound);
+
+	//check types
+	if (!TOY_VALUE_IS_INTEGER(x) || !TOY_VALUE_IS_INTEGER(y) || !TOY_VALUE_IS_INTEGER(index)) {
+		char buffer[256];
+		snprintf(buffer, 256, "Bad types found in 'Terrain.setFlag()'");
+		Toy_error(buffer);
+		Toy_pushStack(&vm->stack, TOY_VALUE_FROM_NULL());
+		return;
+	}
+
+	//check coordinate bounds
+	if (TOY_VALUE_AS_INTEGER(x) < 0 || TOY_VALUE_AS_INTEGER(y) < 0 || (unsigned int)TOY_VALUE_AS_INTEGER(x) >= terrain->width || (unsigned int)TOY_VALUE_AS_INTEGER(y) >= terrain->height) {
+		char buffer[256];
+		snprintf(buffer, 256, "Tile coordinates (%d, %d) out of bounds in 'Terrain.setFlag()'", TOY_VALUE_AS_INTEGER(x), TOY_VALUE_AS_INTEGER(y));
+		Toy_error(buffer);
+		Toy_pushStack(&vm->stack, TOY_VALUE_FROM_NULL());
+		return;
+	}
+
+	//check tile index
+	if (TOY_VALUE_AS_INTEGER(index) < 0 || TOY_VALUE_AS_INTEGER(index) >= TERRAIN_FLAG_TOTAL) {
+		char buffer[256];
+		sprintf(buffer, "Bad index found in 'Terrain.setFlag()'");
+		Toy_error(buffer);
+		Toy_pushStack(&vm->stack, TOY_VALUE_FROM_NULL());
+		return;
+	}
+
+	//set the data
+	terrain->flags[ TOY_VALUE_AS_INTEGER(index) ] = (TerrainFlag){ .x = (unsigned int)TOY_VALUE_AS_INTEGER(x), .y = (unsigned int)TOY_VALUE_AS_INTEGER(y)};
+}
+
 Toy_Value handleTerrainAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attribute) {
 	Terrain* terrain = (Terrain*)TOY_VALUE_AS_OPAQUE(compound);
 
@@ -473,6 +532,10 @@ Toy_Value handleTerrainAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attr
 	}
 	else if (CSTR_MATCH(cstr, "getTile")) {
 		Toy_Function* fn = Toy_createFunctionFromCallback(&vm->memoryBucket, attr_terrainGetTile);
+		return TOY_VALUE_FROM_FUNCTION(fn);
+	}
+	else if (CSTR_MATCH(cstr, "setFlag") && !terrainLocked) {
+		Toy_Function* fn = Toy_createFunctionFromCallback(&vm->memoryBucket, attr_terrainSetFlag);
 		return TOY_VALUE_FROM_FUNCTION(fn);
 	}
 	else {
@@ -500,4 +563,14 @@ unsigned int getTerrainTile(Terrain* terrain, int x, int y) {
 	}
 
 	return terrain->data[y * terrain->width + x];
+}
+
+TerrainFlag getTerrainFlag(Terrain* terrain, unsigned int index) {
+	//check args
+	if (!terrain || index >= TERRAIN_FLAG_TOTAL) {
+		fprintf(stderr, TOY_CC_ERROR "Couldn't get flag index %u (max flags is %u)" TOY_CC_RESET "\n", index, TERRAIN_FLAG_TOTAL);
+		return (TerrainFlag){-1,-1};
+	}
+
+	return terrain->flags[index];
 }

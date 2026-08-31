@@ -10,14 +10,15 @@
 
 #include "keyboard.h"
 #include "mouse.h"
-#include "direction.h"
 #include "terrain.h"
+#include "direction.h"
 #include "tileset.h"
+#include "core.h"
 #include "creep.h"
 #include "player.h"
 
 #include "standard_library.h"
-#include "scope_inspector.h"
+#include "bytecode_inspector.h"
 
 #include "database.h"
 #include <stdio.h>
@@ -251,11 +252,14 @@ Toy_Value dispatchOpaqueAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value att
 		case OPAQUE_MOUSE_RELEASED:
 			return handleMouseAttributes(vm, compound, attribute);
 
+		case OPAQUE_TERRAIN:
+			return handleTerrainAttributes(vm, compound, attribute);
+
 		case OPAQUE_DIRECTION:
 			return handleDirectionAttributes(vm, compound, attribute);
 
-		case OPAQUE_TERRAIN:
-			return handleTerrainAttributes(vm, compound, attribute);
+		case OPAQUE_CORE:
+			return handleCoreAttributes(vm, compound, attribute);
 
 		case OPAQUE_CREEP:
 			return handleCreepAttributes(vm, compound, attribute);
@@ -381,6 +385,20 @@ Player** loadPlayers(int* playerArraySize) {
 		}
 	}
 	closedir(dr);
+
+	//place the player cores on the map
+	Terrain* terrain = getTerrainPtr(); //must be called after the setup script is run
+	if (terrain == NULL) {
+		fprintf(stderr, TOY_CC_ERROR "Couldn't place the player cores on non-existant terrain\n" TOY_CC_RESET);
+	}
+
+	//NOTE: first 8 flags are reserved for player cores
+	for (int i = 0; i < *playerArraySize; i++) {
+		TerrainFlag flag = getTerrainFlag(terrain, i);
+
+		playerArrayHandle[i]->core.position = (Vector2){ .x = flag.x, .y = flag.y };
+	}
+
 	return playerArrayHandle;
 }
 
@@ -390,15 +408,6 @@ void freePlayers(Player** playerArrayHandle, int* playerArraySize) {
 	}
 	free(playerArrayHandle);
 	*playerArraySize = 0;
-}
-
-void drawCreeps(Creep* array, unsigned int capacity, Texture2D sprite) {
-	for (unsigned int i = 0; i < capacity; i++) {
-		if (array[i].active) {
-			//NOTE: multiplied by tile size
-			DrawTexture(sprite, array[i].position.x * 16, array[i].position.y * 16, WHITE);
-		}
-	}
 }
 
 //main file
@@ -452,17 +461,17 @@ int main(int argc, const char* argv[]) {
 	initStandardLibrary(&vm);
 	initEngineAPI(&vm);
 
-	Toy_runVM(&vm);
-
 	if (verbose) {
-		inspect_scope(vm.scope, 0);
+		inspect_bytecode(vm.code);
 	}
 
+	Toy_runVM(&vm);
 	Toy_resetVM(&vm, false, false); //leave in a valid, but unset state
 
 	//load graphical assets
 	Tileset tileset = loadTileset("assets/terrain.png", 16, 16);
 	Texture2D creepSprite = LoadTexture("assets/Creep_full.png");
+	Texture2D coreSprite = LoadTexture("assets/Creep_empty.png"); //TMP
 
 	//load players
 	int playerArraySize = 0;
@@ -508,9 +517,23 @@ int main(int argc, const char* argv[]) {
 			drawDataWithTileset(tileset, terrain->width, terrain->height, terrain->data);
 		}
 
-		//draw bots
-		for (int i = 0; i < playerArraySize; i++) {
-			drawCreeps(playerArrayHandle[i]->creeps, playerArrayHandle[i]->creepCapacity, creepSprite);
+		//For each player
+		for (int p = 0; p < playerArraySize; p++) { //NOTE: positions multiplied by tile size
+			//draw the creeps
+			for (unsigned int c = 0; c < playerArrayHandle[p]->creepCapacity; c++) {
+				if (playerArrayHandle[p]->creeps[c].active) {
+					DrawTexture(creepSprite,
+						playerArrayHandle[p]->creeps[c].position.x * 16,
+						playerArrayHandle[p]->creeps[c].position.y * 16,
+						WHITE);
+				}
+			}
+
+			//draw the cores
+			DrawTexture(coreSprite,
+				playerArrayHandle[p]->core.position.x * 16,
+				playerArrayHandle[p]->core.position.y * 16,
+				WHITE);
 		}
 
 		if (verbose) {
@@ -537,6 +560,7 @@ int main(int argc, const char* argv[]) {
 	Toy_freeVM(&vm);
 	free(entryCode);
 
+	UnloadTexture(coreSprite);
 	UnloadTexture(creepSprite);
 	unloadTileset(tileset);
 
