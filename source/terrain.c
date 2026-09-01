@@ -337,7 +337,7 @@ void initTerrainAPI(Toy_VM* vm) {
 	sqlite3_finalize(stmt);
 }
 
-static CallbackPairs readOnlyLockPairs[] = {
+static CallbackPairs readOnlyCallbackPairs[] = {
 	{"GetTerrain", api_getTerrain},
 	{NULL, NULL},
 };
@@ -349,9 +349,9 @@ void initTerrainReadOnlyAPI(Toy_VM* vm) {
 	}
 
 	//declare each callback in the global scope
-	for (int i = 0; readOnlyLockPairs[i].name; i++) {
-		Toy_String* key = Toy_createStringLength(&(vm->memoryBucket), readOnlyLockPairs[i].name, strlen(readOnlyLockPairs[i].name));
-		Toy_Function* fn = Toy_createFunctionFromCallback(&(vm->memoryBucket), readOnlyLockPairs[i].callback);
+	for (int i = 0; readOnlyCallbackPairs[i].name; i++) {
+		Toy_String* key = Toy_createStringLength(&(vm->memoryBucket), readOnlyCallbackPairs[i].name, strlen(readOnlyCallbackPairs[i].name));
+		Toy_Function* fn = Toy_createFunctionFromCallback(&(vm->memoryBucket), readOnlyCallbackPairs[i].callback);
 
 		Toy_declareScope(&vm->memoryBucket, vm->scope, key, TOY_VALUE_FUNCTION, TOY_VALUE_FROM_FUNCTION(fn), true);
 

@@ -134,7 +134,7 @@ static void api_getCreepIndex(Toy_VM* vm, Toy_FunctionNative* self) {
 	void* ptr = (void*)(&self->meta1);
 	Player* player = *((Player**)ptr);
 
-	if (index < 0 || index >= (int)player->creepCount) {
+	if (index < 0 || index >= (int)player->creepCapacity) {
 		char buffer[256];
 		snprintf(buffer, 256, "Bad argument value found in GetCreepIndex(), %d is out of range", index);
 		Toy_error(buffer);
@@ -162,7 +162,13 @@ static void api_getCreepIndex(Toy_VM* vm, Toy_FunctionNative* self) {
 		//finally, push the correct one and return
 		Toy_pushStack(&vm->stack, TOY_OPAQUE_FROM_POINTER(creep));
 	}
+}
 
+static void api_getCore(Toy_VM* vm, Toy_FunctionNative* self) {
+	//the player object
+	void* ptr = (void*)(&self->meta1);
+	Player* player = *((Player**)ptr);
+	Toy_pushStack(&vm->stack, TOY_OPAQUE_FROM_POINTER(&player->core));
 }
 
 //callback utils
@@ -176,6 +182,7 @@ static CallbackPairs callbackPairs[] = {
 	{"DestroyCreep", api_destroyCreep},
 	{"GetCreepCount", api_getCreepCount},
 	{"GetCreepIndex", api_getCreepIndex},
+	{"GetCore", api_getCore},
 	{NULL, NULL},
 };
 
