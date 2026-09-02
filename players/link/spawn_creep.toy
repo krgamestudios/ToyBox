@@ -6,8 +6,8 @@ var x = 0;
 var y = 0;
 
 for (var i = 0; i < 100; i++) {
-	x = abs(rand()) % terrain.width;
-	y = abs(rand()) % terrain.height;
+	x = rand() % terrain.width;
+	y = rand() % terrain.height;
 
 	if (terrain.getTile(x, y) == 0) { //empty and useable
 		return CreateCreep(x, y);

@@ -14,8 +14,8 @@ fn checkCoreBounds(arrayX, arrayY, length, posX, posY) {
 fn placeCoreFlags(maxAttempts) {
 	for (var _ = 0; _ < maxAttempts; _++) {
 		//8 random locations
-		var x: Array = [abs(rand()) % terrain.width, abs(rand()) % terrain.width, abs(rand()) % terrain.width, abs(rand()) % terrain.width, abs(rand()) % terrain.width, abs(rand()) % terrain.width, abs(rand()) % terrain.width, abs(rand()) % terrain.width];
-		var y: Array = [abs(rand()) % terrain.height, abs(rand()) % terrain.height, abs(rand()) % terrain.height, abs(rand()) % terrain.height, abs(rand()) % terrain.height, abs(rand()) % terrain.height, abs(rand()) % terrain.height, abs(rand()) % terrain.height];
+		var x: Array = [rand() % terrain.width, rand() % terrain.width, rand() % terrain.width, rand() % terrain.width, rand() % terrain.width, rand() % terrain.width, rand() % terrain.width, rand() % terrain.width];
+		var y: Array = [rand() % terrain.height, rand() % terrain.height, rand() % terrain.height, rand() % terrain.height, rand() % terrain.height, rand() % terrain.height, rand() % terrain.height, rand() % terrain.height];
 
 		//check if terrain is free for each location
 		if (terrain.getTile(x[0], y[0]) != 0) continue;
@@ -65,8 +65,8 @@ if (terrain == null) {
 
 	//add some random obstacles
 	for (var _ = 0; _ < 15; _++) {
-		var x = abs(rand()) % 30 + 5;
-		var y = abs(rand()) % 30 + 5;
+		var x = rand() % 30 + 5;
+		var y = rand() % 30 + 5;
 
 		for (var i = 0; i < 3; i++) {
 			for (var j = 0; j < 3; j++) {
