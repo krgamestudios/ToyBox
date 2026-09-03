@@ -9,6 +9,7 @@ typedef struct DirectionMap {
 } DirectionMap;
 
 DirectionMap directionMap[] = {
+	{NONE, "NONE"},
 	{NORTH, "NORTH"},
 	{NORTHEAST, "NORTHEAST"},
 	{EAST, "EAST"},

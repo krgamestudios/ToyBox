@@ -11,5 +11,5 @@ if (KeyPressed.ENTER && GetCreepCount() > 0) {
 //DEBUG: move the creeps randomly
 for (var i = 0; i < GetCreepCount(); i++) {
 	var creep = GetCreepIndex(i);
-	creep.move(rand() % 9);
+	creep.move(rand() % 10);
 }

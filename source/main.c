@@ -410,6 +410,16 @@ void freePlayers(Player** playerArrayHandle, int* playerArraySize) {
 	*playerArraySize = 0;
 }
 
+void tickPlayers(Player** playerArrayHandle, int playerArraySize) {
+	for (int i = 0; i < playerArraySize; i++) {
+		Toy_VM* pvm = &(playerArrayHandle[i])->vm;
+		//this temporary scope lets players declare vars in the root of the file
+		pvm->scope = Toy_pushScope(&pvm->memoryBucket, pvm->scope);
+		Toy_runVM(pvm);
+		pvm->scope = Toy_popScope(pvm->scope);
+	}
+}
+
 //main file
 int main(int argc, const char* argv[]) {
 	//not necessary, but nice to have
@@ -470,8 +480,8 @@ int main(int argc, const char* argv[]) {
 
 	//load graphical assets
 	Tileset tileset = loadTileset("assets/terrain.png", 16, 16);
-	Texture2D creepSprite = LoadTexture("assets/Creep_full.png");
 	Texture2D coreSprite = LoadTexture("assets/Creep_empty.png"); //TMP
+	Texture2D creepSprite = LoadTexture("assets/Creep_full.png");
 
 	//load players
 	int playerArraySize = 0;
@@ -498,14 +508,9 @@ int main(int argc, const char* argv[]) {
 		Toy_runVM(&vm); //no check needed, empty VMs are skipped
 
 		//process player scripts
-		for (int i = 0; i < playerArraySize; i++) {
-			Toy_VM* pvm = &(playerArrayHandle[i])->vm;
-			pvm->scope = Toy_pushScope(&pvm->memoryBucket, pvm->scope); //this temporary scope lets players declare vars in the root of the file
-
-			Toy_runVM(pvm);
-
-			pvm->scope = Toy_popScope(pvm->scope);
-		}
+		static int ticker = 0;
+		if (ticker++ % 4 == 0)
+			tickPlayers(playerArrayHandle, playerArraySize);
 
 		//rendering all at once
 		BeginDrawing();
@@ -519,6 +524,12 @@ int main(int argc, const char* argv[]) {
 
 		//For each player
 		for (int p = 0; p < playerArraySize; p++) { //NOTE: positions multiplied by tile size
+			//draw the cores
+			DrawTexture(coreSprite,
+				playerArrayHandle[p]->core.position.x * 16,
+				playerArrayHandle[p]->core.position.y * 16,
+				WHITE);
+
 			//draw the creeps
 			for (unsigned int c = 0; c < playerArrayHandle[p]->creepCapacity; c++) {
 				if (playerArrayHandle[p]->creeps[c].active) {
@@ -528,12 +539,6 @@ int main(int argc, const char* argv[]) {
 						WHITE);
 				}
 			}
-
-			//draw the cores
-			DrawTexture(coreSprite,
-				playerArrayHandle[p]->core.position.x * 16,
-				playerArrayHandle[p]->core.position.y * 16,
-				WHITE);
 		}
 
 		if (verbose) {
