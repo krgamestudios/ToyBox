@@ -1,9 +1,9 @@
-if (KeyPressed.SPACE && GetCreepCount() < 8) {
+if (Keyboard.SPACE && GetCreepCount() < 8) {
 	import "spawn_creep.toy" as doTheCreep;
 	var creep = doTheCreep();
 }
 
-if (KeyPressed.ENTER && GetCreepCount() > 0) {
+if (Keyboard.ENTER && GetCreepCount() > 0) {
 	var creep = GetCreepIndex( rand() % GetCreepCount() );
 	DestroyCreep(creep);
 }

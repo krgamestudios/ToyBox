@@ -1,50 +1,50 @@
-//utils
-fn checkCoreBounds(arrayX, arrayY, length, posX, posY) {
-	for (var i = 0; i < length; i++) {
-		if (posX >= arrayX[i] - 1 &&
-			posX <= arrayX[i] + 1 &&
-			posY >= arrayY[i] - 1 &&
-			posY <= arrayY[i] + 1
-			)
-			return true;
+//filter functions
+fn findCellsByCriteria(terrain, validator) {
+	var x: Array = [];
+	var y: Array = [];
+
+	for (var j = 0; j < terrain.height; j++) {
+		for (var i = 0; i < terrain.width; i++) {
+			if (validator(terrain, i, j)) {
+				x.pushBack(i);
+				y.pushBack(j);
+			}
+		}
 	}
-	return false;
+
+	return [x, y];
 }
 
-fn placeCoreFlags(maxAttempts) {
-	for (var _ = 0; _ < maxAttempts; _++) {
-		//8 random locations
-		var x: Array = [rand() % terrain.width, rand() % terrain.width, rand() % terrain.width, rand() % terrain.width, rand() % terrain.width, rand() % terrain.width, rand() % terrain.width, rand() % terrain.width];
-		var y: Array = [rand() % terrain.height, rand() % terrain.height, rand() % terrain.height, rand() % terrain.height, rand() % terrain.height, rand() % terrain.height, rand() % terrain.height, rand() % terrain.height];
+fn coreCriteria(terrain, x, y) {
+	if (terrain.getTile(x, y) != 0) return false; //is a floor
+	if (x <= 0 || y <= 0 || x >= terrain.width-1 || y >= terrain.height-1) return false; //is not an edge
 
-		//check if terrain is free for each location
-		if (terrain.getTile(x[0], y[0]) != 0) continue;
-		if (terrain.getTile(x[1], y[1]) != 0) continue;
-		if (terrain.getTile(x[2], y[2]) != 0) continue;
-		if (terrain.getTile(x[3], y[3]) != 0) continue;
-		if (terrain.getTile(x[4], y[4]) != 0) continue;
-		if (terrain.getTile(x[5], y[5]) != 0) continue;
-		if (terrain.getTile(x[6], y[6]) != 0) continue;
-		if (terrain.getTile(x[7], y[7]) != 0) continue;
-
-		//check if cores are too close
-		var collision = false;
-		for (var col = 2; col < 8; col++) {
-			collision = collision || checkCoreBounds(x, y, col-1, x[col], y[col]);
+	//margin of 1
+	var total: Int = 0;
+	for (var i = -1; i <= 1; i++) {
+		for (var j = -1; j <= 1; j++) {
+			if (x+i < 0 || y+j < 0 || x+i >= terrain.width || y+j >= terrain.height) continue;
+			if (terrain.getTile(x+i, y+j) == 0) total++;
 		}
-		if (collision) continue;
-
-		//etch these flags and return
-		for (var i = 0; i < 8; i++) {
-			terrain.setFlag(i, x[i], y[i]);
-		}
-		return true;
 	}
-	//failed
-	return null;
+
+	return total == 9;
 }
 
+fn sourceCriteria(terrain, x, y) {
+	if (terrain.getTile(x, y) != 1) return false; //is a wall
+	if (x <= 0 || y <= 0 || x >= terrain.width-1 || y >= terrain.height-1) return false; //is not an edge
 
+	var total: Int = 0;
+	for (var i = -1; i <= 1; i++) {
+		for (var j = -1; j <= 1; j++) {
+			if (x+i < 0 || y+j < 0 || x+i >= terrain.width || y+j >= terrain.height) continue;
+			if (terrain.getTile(x+i, y+j) == 1) total++;
+		}
+	}
+
+	return total >= 1 && total <= 8;
+}
 
 //if no preexisting terrain is available, make some
 var terrain = LoadTerrain();
@@ -63,7 +63,7 @@ if (terrain == null) {
 		terrain.setTile(terrain.width - 1, j, 1);
 	}
 
-	//add some random obstacles
+	//add some random greebles
 	for (var _ = 0; _ < 15; _++) {
 		var x = rand() % 30 + 5;
 		var y = rand() % 30 + 5;
@@ -75,8 +75,70 @@ if (terrain == null) {
 		}
 	}
 
-	//try and place 8 flags for player cores
-	assert placeCoreFlags(100), "Failed to place core flags in terrain";
+	//possible core locations
+	var coreCanditates = findCellsByCriteria(terrain, coreCriteria);
+	var coreCanditatesX = coreCanditates[0];
+	var coreCanditatesY = coreCanditates[1];
+	coreCanditates = null;
+
+	var coresX: Array = [];
+	var coresY: Array = [];
+
+	for (var _ = 0; _ < 8; _++) {
+		//find a valid result that hasn't been removed
+		var index = -1;
+		while(index < 0) {
+			index = rand() % coreCanditatesX.length;
+			if (coreCanditatesX[index] < 0 || coreCanditatesY[index] < 0) {
+				index = -1;
+				continue;
+				assert false, "first terrain assert failed";
+			}
+
+			//check this doesn't overlap existing cores (remove it if it does)
+			for (var foobar = 0; foobar < coresX.length; foobar++) {
+				if (abs(coreCanditatesX[index] - coresX[foobar]) <= 2 || abs(coreCanditatesY[index] - coresY[foobar]) <= 2) {
+					coreCanditatesX[index] = -1;
+					coreCanditatesY[index] = -1;
+					index = -1;
+					break; //breaks from the for, returning to the while
+					assert false, "second terrain assert failed";
+				}
+			}
+		}
+
+		//finally, accept this candidtate and remove it
+		coresX.pushBack(coreCanditatesX[index]);
+		coresY.pushBack(coreCanditatesY[index]);
+		coreCanditatesX[index] = -1;
+		coreCanditatesY[index] = -1;
+
+	}
+
+	//store the cores as flags
+	for (var i = 0; i < 8; i++) {
+		terrain.setFlag(i, coresX[i], coresY[i]);
+	}
+
+	//possible source locations
+	var sourceCandidates = findCellsByCriteria(terrain, sourceCriteria);
+	var sourceCandidatesX = sourceCandidates[0];
+	var sourceCandidatesY = sourceCandidates[1];
+	sourceCandidates = null;
+
+	for (var _ = 0; _ < 2; _++) {
+		//find a valid result that hasn't been removed
+		var index = -1;
+		while(index < 0 || sourceCandidatesX[index] < 0) {
+			index = rand() % sourceCandidatesX.length;
+		}
+
+		//set the flag and remove it
+		terrain.setFlag(_ + 8, sourceCandidatesX[index], sourceCandidatesY[index]);
+
+		sourceCandidatesX[index] = -1;
+		sourceCandidatesY[index] = -1;
+	}
 }
 
 //pass this back to the calling script
