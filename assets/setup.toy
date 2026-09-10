@@ -1,11 +1,16 @@
 srand(time());
 
-InitScreen(40 * 16, 40 * 16, "Bottle Battle");
+InitScreen(50 * 16, 50 * 16, "Bottle Battle");
 //InitLoop(null, null, null);
 
-import "terrain_default.toy" as terrain_default;
+//load the terrain object
+var terrain = LoadTerrain();
 
-var terrain = terrain_default();
-//SaveTerrain(terrain);
+//if (terrain == null) {
+	import "terrain_procgen.toy" as procgen;
+	terrain = procgen()(50, 50, 20);
+	SaveTerrain(terrain);
+//}
+
 
 SetTerrainLockState(true);

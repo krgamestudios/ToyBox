@@ -19,7 +19,7 @@ fn coreCriteria(terrain, x, y) {
 	if (terrain.getTile(x, y) != 0) return false; //is a floor
 	if (x <= 0 || y <= 0 || x >= terrain.width-1 || y >= terrain.height-1) return false; //is not an edge
 
-	//margin of 1
+	//sample the surrounding tiles
 	var total: Int = 0;
 	for (var i = -1; i <= 1; i++) {
 		for (var j = -1; j <= 1; j++) {
@@ -28,6 +28,7 @@ fn coreCriteria(terrain, x, y) {
 		}
 	}
 
+	//this floor needs to be clear
 	return total == 9;
 }
 
@@ -35,6 +36,7 @@ fn sourceCriteria(terrain, x, y) {
 	if (terrain.getTile(x, y) != 1) return false; //is a wall
 	if (x <= 0 || y <= 0 || x >= terrain.width-1 || y >= terrain.height-1) return false; //is not an edge
 
+	//sample the surrounding tiles
 	var total: Int = 0;
 	for (var i = -1; i <= 1; i++) {
 		for (var j = -1; j <= 1; j++) {
@@ -43,14 +45,13 @@ fn sourceCriteria(terrain, x, y) {
 		}
 	}
 
+	//this wall needs to be accessible
 	return total >= 1 && total <= 8;
 }
 
-//if no preexisting terrain is available, make some
-var terrain = LoadTerrain();
-
-if (terrain == null) {
-	terrain = CreateTerrain(40, 40);
+//generate a new terrain object, using a simple layout
+fn generateTerrain(width, height, greebleCount) {
+	var terrain = CreateTerrain(width, height);
 
 	//set up some "walls" along the edges
 	for (var i = 0; i < terrain.width; i++) {
@@ -63,10 +64,10 @@ if (terrain == null) {
 		terrain.setTile(terrain.width - 1, j, 1);
 	}
 
-	//add some random greebles
-	for (var _ = 0; _ < 15; _++) {
-		var x = rand() % 30 + 5;
-		var y = rand() % 30 + 5;
+	//add some random square greebles as terrain
+	for (var _ = 0; _ < greebleCount; _++) {
+		var x = rand() % (terrain.width - 10) + 5;
+		var y = rand() % (terrain.height - 10) + 5;
 
 		for (var i = 0; i < 3; i++) {
 			for (var j = 0; j < 3; j++) {
@@ -79,20 +80,19 @@ if (terrain == null) {
 	var coreCanditates = findCellsByCriteria(terrain, coreCriteria);
 	var coreCanditatesX = coreCanditates[0];
 	var coreCanditatesY = coreCanditates[1];
-	coreCanditates = null;
+	coreCanditates = null; //set this to null so we don't use it by accident
 
 	var coresX: Array = [];
 	var coresY: Array = [];
 
-	for (var _ = 0; _ < 8; _++) {
-		//find a valid result that hasn't been removed
+	for (var _ = 0; _ < 8; _++) { //NOTE: there's always 8 possible locations, but which ones are used are determined later
+		//find a valid result that hasn't been removed (set to -1)
 		var index = -1;
 		while(index < 0) {
 			index = rand() % coreCanditatesX.length;
 			if (coreCanditatesX[index] < 0 || coreCanditatesY[index] < 0) {
 				index = -1;
 				continue;
-				assert false, "first terrain assert failed";
 			}
 
 			//check this doesn't overlap existing cores (remove it if it does)
@@ -102,7 +102,6 @@ if (terrain == null) {
 					coreCanditatesY[index] = -1;
 					index = -1;
 					break; //breaks from the for, returning to the while
-					assert false, "second terrain assert failed";
 				}
 			}
 		}
@@ -112,7 +111,6 @@ if (terrain == null) {
 		coresY.pushBack(coreCanditatesY[index]);
 		coreCanditatesX[index] = -1;
 		coreCanditatesY[index] = -1;
-
 	}
 
 	//store the cores as flags
@@ -126,7 +124,7 @@ if (terrain == null) {
 	var sourceCandidatesY = sourceCandidates[1];
 	sourceCandidates = null;
 
-	for (var _ = 0; _ < 2; _++) {
+	for (var _ = 0; _ < 8; _++) { //NOTE: we flag 8 possible locations for sources, but we won't run an overlap check as that's less of a concern
 		//find a valid result that hasn't been removed
 		var index = -1;
 		while(index < 0 || sourceCandidatesX[index] < 0) {
@@ -139,7 +137,9 @@ if (terrain == null) {
 		sourceCandidatesX[index] = -1;
 		sourceCandidatesY[index] = -1;
 	}
+
+	return terrain;
 }
 
-//pass this back to the calling script
-return terrain;
+//return the function that generates terrain
+return generateTerrain;
