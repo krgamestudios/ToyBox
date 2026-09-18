@@ -64,6 +64,7 @@ void api_createTerrain(Toy_VM* vm, Toy_FunctionNative* self) {
 	terrain->type = OPAQUE_TERRAIN;
 	terrain->width = TOY_VALUE_AS_INTEGER(width);
 	terrain->height = TOY_VALUE_AS_INTEGER(height);
+	terrain->flagMask = 0;
 	memset(terrain->flags, -1, sizeof(TerrainFlag) * TERRAIN_FLAG_TOTAL);
 	memset(terrain->data, 0, sizeof(unsigned int) * terrain->width * terrain->height);
 
@@ -172,6 +173,7 @@ void api_loadTerrain(Toy_VM* vm, Toy_FunctionNative* self) {
 	terrain->type = OPAQUE_TERRAIN;
 	terrain->width = width;
 	terrain->height = height;
+	terrain->flagMask = 0;
 	if (terrain->width * terrain->height > 0) {
 		memcpy(terrain->flags, (unsigned int*)sqlite3_column_blob(stmt, 3), sizeof(TerrainFlag) * TERRAIN_FLAG_TOTAL);
 		memcpy(terrain->data, (unsigned int*)sqlite3_column_blob(stmt, 4), sizeof(unsigned int) * terrain->width * terrain->height);
@@ -233,8 +235,8 @@ void api_saveTerrain(Toy_VM* vm, Toy_FunctionNative* self) {
 	}
 
 	sqlite3_bind_int(stmt, 1, 1); //id
-	sqlite3_bind_int(stmt, 2, terrain->width); //width
-	sqlite3_bind_int(stmt, 3, terrain->height); //height
+	sqlite3_bind_int(stmt, 2, terrain->width);
+	sqlite3_bind_int(stmt, 3, terrain->height);
 	sqlite3_bind_blob(stmt, 4, terrain->flags, sizeof(TerrainFlag) * TERRAIN_FLAG_TOTAL, SQLITE_STATIC); //data
 	sqlite3_bind_blob(stmt, 5, terrain->data, sizeof(unsigned int) * terrain->width * terrain->height, SQLITE_STATIC); //data
 

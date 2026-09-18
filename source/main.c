@@ -138,8 +138,17 @@ static Toy_Function* onClose = NULL;
 static bool verbose = false;
 static bool uncappedFPS = false;
 
-//extern members
+#define PLAYERS_CAPACITY 8
+static int playersCount = 0;
+static Player* playersHandle[PLAYERS_CAPACITY] = {0};
+
+//extern member definitions
 sqlite3* database = NULL;
+
+//forward declarations
+Player* loadPlayer(const char* name);
+void freeAllPlayers();
+void tickAllPlayers();
 
 //engine API definitions
 void api_initScreen(Toy_VM* vm, Toy_FunctionNative* self) {
@@ -158,7 +167,7 @@ void api_initScreen(Toy_VM* vm, Toy_FunctionNative* self) {
 	Toy_Value width = Toy_popStack(&vm->stack);
 
 	if (!TOY_VALUE_IS_STRING(caption) || TOY_VALUE_AS_STRING(caption)->info.type != TOY_STRING_LEAF || !TOY_VALUE_IS_INTEGER(height) || !TOY_VALUE_IS_INTEGER(width)) {
-		fprintf(stderr, TOY_CC_ERROR "ERROR: Bad types found in 'initScreen', exiting" TOY_CC_RESET "\n");
+		fprintf(stderr, TOY_CC_ERROR "ERROR: Bad types found in 'InitScreen', exiting" TOY_CC_RESET "\n");
 		exit(-1);
 	}
 
@@ -193,41 +202,73 @@ void api_initLoop(Toy_VM* vm, Toy_FunctionNative* self) {
 	Toy_Value valueOnReady = Toy_popStack(&vm->stack);
 
 	if (!TOY_VALUE_IS_FUNCTION(valueOnClose) && !TOY_VALUE_IS_NULL(valueOnClose)) {
-		fprintf(stderr, TOY_CC_ERROR "ERROR: Bad types found in 'initLoop', exiting" TOY_CC_RESET "\n");
+		fprintf(stderr, TOY_CC_ERROR "ERROR: Bad types found in 'InitLoop', exiting" TOY_CC_RESET "\n");
 		exit(-1);
 	}
 
 	if (!TOY_VALUE_IS_FUNCTION(valueOnFrame) && !TOY_VALUE_IS_NULL(valueOnFrame)) {
-		fprintf(stderr, TOY_CC_ERROR "ERROR: Bad types found in 'initLoop', exiting" TOY_CC_RESET "\n");
+		fprintf(stderr, TOY_CC_ERROR "ERROR: Bad types found in 'InitLoop', exiting" TOY_CC_RESET "\n");
 		exit(-1);
 	}
 
 	if (!TOY_VALUE_IS_FUNCTION(valueOnReady) && !TOY_VALUE_IS_NULL(valueOnReady)) {
-		fprintf(stderr, TOY_CC_ERROR "ERROR: Bad types found in 'initLoop', exiting" TOY_CC_RESET "\n");
+		fprintf(stderr, TOY_CC_ERROR "ERROR: Bad types found in 'InitLoop', exiting" TOY_CC_RESET "\n");
 		exit(-1);
 	}
 
 	if (TOY_VALUE_IS_FUNCTION(valueOnReady)) {
 		if (TOY_VALUE_AS_FUNCTION(valueOnReady)->type != TOY_FUNCTION_CUSTOM) {
-			fprintf(stderr, TOY_CC_ERROR "ERROR: Bad function found in 'initLoop', exiting (only allows custom functions or null)" TOY_CC_RESET "\n");
+			fprintf(stderr, TOY_CC_ERROR "ERROR: Bad function found in 'InitLoop', exiting (only allows custom functions or null)" TOY_CC_RESET "\n");
 			exit(-1);
 		}
 		onReady = TOY_VALUE_AS_FUNCTION(valueOnReady);
 	}
 	if (TOY_VALUE_IS_FUNCTION(valueOnFrame)) {
 		if (TOY_VALUE_AS_FUNCTION(valueOnFrame)->type != TOY_FUNCTION_CUSTOM) {
-			fprintf(stderr, TOY_CC_ERROR "ERROR: Bad function found in 'initLoop', exiting (only allows custom functions or null)" TOY_CC_RESET "\n");
+			fprintf(stderr, TOY_CC_ERROR "ERROR: Bad function found in 'InitLoop', exiting (only allows custom functions or null)" TOY_CC_RESET "\n");
 			exit(-1);
 		}
 		onFrame = TOY_VALUE_AS_FUNCTION(valueOnFrame);
 	}
 	if (TOY_VALUE_IS_FUNCTION(valueOnClose)) {
 		if (TOY_VALUE_AS_FUNCTION(valueOnClose)->type != TOY_FUNCTION_CUSTOM) {
-			fprintf(stderr, TOY_CC_ERROR "ERROR: Bad function found in 'initLoop', exiting (only allows custom functions or null)" TOY_CC_RESET "\n");
+			fprintf(stderr, TOY_CC_ERROR "ERROR: Bad function found in 'InitLoop', exiting (only allows custom functions or null)" TOY_CC_RESET "\n");
 			exit(-1);
 		}
 		onClose = TOY_VALUE_AS_FUNCTION(valueOnClose);
 	}
+}
+
+void api_loadPlayer(Toy_VM* vm, Toy_FunctionNative* self) {
+	(void)self;
+
+	//check parameter count
+	if (vm->stack->count < 1) {
+		char buffer[256];
+		snprintf(buffer, 256, "Not enough parameters found in 'LoadPlayer'");
+		Toy_error(buffer);
+		return;
+	}
+
+	Toy_Value nameValue = Toy_popStack(&vm->stack);
+
+	if (!TOY_VALUE_IS_STRING(nameValue)) {
+		fprintf(stderr, TOY_CC_ERROR "ERROR: Bad types found in 'LoadPlayer', exiting" TOY_CC_RESET "\n");
+		exit(-1);
+	}
+
+	Toy_String* name = TOY_VALUE_AS_STRING(nameValue);
+
+	if (name->info.type == TOY_STRING_LEAF) {
+		playersHandle[playersCount++] = loadPlayer(name->leaf.data);
+	}
+	else {
+		char* buffer = Toy_getStringRaw(name);
+		playersHandle[playersCount++] = loadPlayer(buffer);
+		free(buffer);
+	}
+
+	Toy_freeValue(nameValue);
 }
 
 //API opaque dispatch
@@ -279,6 +320,7 @@ typedef struct CallbackPairs {
 static CallbackPairs callbackPairs[] = {
 	{"InitScreen", api_initScreen},
 	{"InitLoop", api_initLoop},
+	{"LoadPlayer", api_loadPlayer},
 	{NULL, NULL},
 };
 
@@ -341,78 +383,64 @@ void initGameAPI(Toy_VM* vm, Player* player) {
 	initPlayerAPI(vm, player);
 }
 
-//util for finding and loading all players
-Player** loadPlayers(int* playerArraySize) {
-	if (*playerArraySize != 0) {
-		fprintf(stderr, TOY_CC_ERROR "Bad params passed to 'loadPlayers'" TOY_CC_RESET "\n");
+//util for finding and loading each player
+Player* loadPlayer(const char* name) {
+	//build the path to the main file & working directory of the given player folder
+	char mainfile[1024];
+	snprintf(mainfile, 1024, "players/%s/main.toy", name);
+	char workingDir[256];
+	Toy_private_getWorkingDir(workingDir, mainfile, 256);
+
+	//load & compile the player script
+	int size = 0;
+	const char* source = (char*)readFile(mainfile, &size);
+	if (source == NULL) {
 		return NULL;
 	}
 
-	DIR* dr = opendir("players");
-	if (dr == NULL) {
-		fprintf(stderr, TOY_CC_ERROR "Couldn't open the directory 'players'" TOY_CC_RESET "\n");
-		*playerArraySize = 0;
-		return NULL;
-	}
+	unsigned char* code = makeCodeFromSource(source, workingDir);
+	Player* player = allocatePlayer();
+	bindBytecodeToPlayer(player, code);
 
-	//WARN: players capped at 8
-	Player** playerArrayHandle = malloc(sizeof(Player*) * 8);
+	initStandardLibrary(&player->vm);
+	initGameAPI(&player->vm, player);
 
-	struct dirent *de;
-	while ((de = readdir(dr)) != NULL && (*playerArraySize) < 8) {
-		if (de->d_type == DT_DIR) {
-			//build the path to the main file & working directory
-			char mainfile[1024];
-			snprintf(mainfile, 1024, "players/%s/main.toy", de->d_name);
-			char workingDir[256];
-			Toy_private_getWorkingDir(workingDir, mainfile, 256);
-
-			//load & compile the player script
-			int size = 0;
-			const char* source = (char*)readFile(mainfile, &size);
-			if (source == NULL) {
-				continue;
-			}
-
-			unsigned char* code = makeCodeFromSource(source, workingDir);
-			playerArrayHandle[*playerArraySize] = allocatePlayer();
-			bindBytecodeToPlayer(playerArrayHandle[*playerArraySize], code);
-
-			initStandardLibrary(&(playerArrayHandle[*playerArraySize])->vm);
-			initGameAPI(&(playerArrayHandle[*playerArraySize])->vm, playerArrayHandle[*playerArraySize]);
-
-			(*playerArraySize)++;
-		}
-	}
-	closedir(dr);
-
-	//place the player cores on the map
+	//place the player's core on the map
 	Terrain* terrain = getTerrainPtr(); //must be called after the setup script is run
 	if (terrain == NULL) {
-		fprintf(stderr, TOY_CC_ERROR "Couldn't place the player cores on non-existant terrain\n" TOY_CC_RESET);
+		fprintf(stderr, TOY_CC_ERROR "ERROR: Couldn't place the player cores on non-existant terrain (The players can only be loaded after the terrain)\n" TOY_CC_RESET);
+		exit(-1);
 	}
 
-	//NOTE: first 8 flags are reserved for player cores
-	for (int i = 0; i < *playerArraySize; i++) {
-		TerrainFlag flag = getTerrainFlag(terrain, i);
-
-		playerArrayHandle[i]->core.position = (Vector2){ .x = flag.x, .y = flag.y };
+	//check that not all core flags are occupied
+	if ((terrain->flagMask ^ 0xFF) == 0) {
+		fprintf(stderr, TOY_CC_ERROR "ERROR: Too many players allocated\n" TOY_CC_RESET);
+		exit(-1);
 	}
 
-	return playerArrayHandle;
+	//NOTE: first 8 flags are reserved for player core locations
+	for (unsigned int i = 0; i < 8; i++) {
+		if ((terrain->flagMask & (1 << i)) == 0) {
+			TerrainFlag flag = getTerrainFlag(terrain, i);
+			player->core.position = (Vector2){ .x = flag.x, .y = flag.y };
+			terrain->flagMask |= (1 << i);
+			break;
+		}
+	}
+
+	return player;
 }
 
-void freePlayers(Player** playerArrayHandle, int* playerArraySize) {
-	for (int i = 0; i < *playerArraySize; i++) {
-		freePlayer(playerArrayHandle[i]);
+void freeAllPlayers() {
+	for (int i = 0; i < playersCount; i++) {
+		freePlayer(playersHandle[i]);
 	}
-	free(playerArrayHandle);
-	*playerArraySize = 0;
+	playersCount = 0;
 }
 
-void tickPlayers(Player** playerArrayHandle, int playerArraySize) {
-	for (int i = 0; i < playerArraySize; i++) {
-		Toy_VM* pvm = &(playerArrayHandle[i])->vm;
+void tickAllPlayers() {
+	for (int i = 0; i < playersCount; i++) {
+		Toy_VM* pvm = &playersHandle[i]->vm;
 		//this temporary scope lets players declare vars in the root of the file
 		pvm->scope = Toy_pushScope(&pvm->memoryBucket, pvm->scope);
 		Toy_runVM(pvm);
@@ -448,7 +476,7 @@ int main(int argc, const char* argv[]) {
 	const char* source = (char*)readFile(setupFile, &size);
 
 	if (!source) {
-		fprintf(stderr, TOY_CC_ERROR "File read error: " TOY_CC_RESET);
+		fprintf(stderr, TOY_CC_ERROR "ERROR: Failed to read a file, " TOY_CC_RESET);
 		if (size == -1) {
 			fprintf(stderr, TOY_CC_ERROR "Couldn't find %s\n" TOY_CC_RESET, setupFile);
 		}
@@ -483,12 +511,8 @@ int main(int argc, const char* argv[]) {
 	Texture2D coreSprite = LoadTexture("assets/Creep_empty.png"); //TMP
 	Texture2D creepSprite = LoadTexture("assets/Creep_full.png");
 
-	//load players
-	int playerArraySize = 0;
-	Player** playerArrayHandle = loadPlayers(&playerArraySize);
-	if (playerArraySize <= 0) {
-		fprintf(stderr, TOY_CC_ERROR "Player loading failed" TOY_CC_RESET "\n");
-		return -1;
+	if (playersCount <= 0) {
+		fprintf(stderr, TOY_CC_WARN "WARNING: No players loaded" TOY_CC_RESET "\n");
 	}
 
 	//setup and run the given loop functions, if able
@@ -508,9 +532,9 @@ int main(int argc, const char* argv[]) {
 		Toy_runVM(&vm); //no check needed, empty VMs are skipped
 
 		//process player scripts
-		static int ticker = 0;
+		static int ticker = 0; //TMP
 		if (ticker++ % 4 == 0)
-			tickPlayers(playerArrayHandle, playerArraySize);
+			tickAllPlayers();
 
 		//rendering all at once
 		BeginDrawing();
@@ -523,19 +547,19 @@ int main(int argc, const char* argv[]) {
 		}
 
 		//For each player
-		for (int p = 0; p < playerArraySize; p++) { //NOTE: positions multiplied by tile size
+		for (int p = 0; p < playersCount; p++) { //NOTE: positions multiplied by tile size
 			//draw the cores
 			DrawTexture(coreSprite,
-				playerArrayHandle[p]->core.position.x * 16,
-				playerArrayHandle[p]->core.position.y * 16,
+				playersHandle[p]->core.position.x * 16,
+				playersHandle[p]->core.position.y * 16,
 				WHITE);
 
 			//draw the creeps
-			for (unsigned int c = 0; c < playerArrayHandle[p]->creepCapacity; c++) {
-				if (playerArrayHandle[p]->creeps[c].active) {
+			for (unsigned int c = 0; c < playersHandle[p]->creepCapacity; c++) {
+				if (playersHandle[p]->creeps[c].active) {
 					DrawTexture(creepSprite,
-						playerArrayHandle[p]->creeps[c].position.x * 16,
-						playerArrayHandle[p]->creeps[c].position.y * 16,
+						playersHandle[p]->creeps[c].position.x * 16,
+						playersHandle[p]->creeps[c].position.y * 16,
 						WHITE);
 				}
 			}
@@ -560,7 +584,7 @@ int main(int argc, const char* argv[]) {
 		Toy_resetVM(&vm, false, false);
 	}
 
-	freePlayers(playerArrayHandle, &playerArraySize);
+	freeAllPlayers();
 
 	Toy_freeVM(&vm);
 	free(entryCode);

@@ -1,7 +1,9 @@
+//NOTE: this is a placeholder creep spawner
+
 //get the environment
 var terrain = GetTerrain();
 
-//try and find a good spawn point
+//try and find an empty space
 var x = 0;
 var y = 0;
 

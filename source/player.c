@@ -108,7 +108,7 @@ static void api_getCreepCount(Toy_VM* vm, Toy_FunctionNative* self) {
 	Toy_pushStack(&vm->stack, TOY_VALUE_FROM_INTEGER(player->creepCount));
 }
 
-static void api_getCreepIndex(Toy_VM* vm, Toy_FunctionNative* self) {
+static void api_getCreepByIndex(Toy_VM* vm, Toy_FunctionNative* self) {
 	if (vm->stack->count < 1) {
 		char buffer[256];
 		snprintf(buffer, 256, "Not enough parameters found in 'GetCreepIndex()'");
@@ -181,7 +181,7 @@ static CallbackPairs callbackPairs[] = {
 	{"CreateCreep", api_createCreep},
 	{"DestroyCreep", api_destroyCreep},
 	{"GetCreepCount", api_getCreepCount},
-	{"GetCreepIndex", api_getCreepIndex},
+	{"GetCreepByIndex", api_getCreepByIndex},
 	{"GetCore", api_getCore},
 	{NULL, NULL},
 };

@@ -4,12 +4,12 @@ if (Keyboard.SPACE && GetCreepCount() < 8) {
 }
 
 if (Keyboard.ENTER && GetCreepCount() > 0) {
-	var creep = GetCreepIndex( rand() % GetCreepCount() );
+	var creep = GetCreepByIndex( rand() % GetCreepCount() );
 	DestroyCreep(creep);
 }
 
 //DEBUG: move the creeps randomly
 for (var i = 0; i < GetCreepCount(); i++) {
-	var creep = GetCreepIndex(i);
+	var creep = GetCreepByIndex(i);
 	creep.move(rand() % 10);
 }

@@ -15,6 +15,7 @@ typedef struct Terrain {
 	OpaqueType type;
 	unsigned int width;
 	unsigned int height;
+	unsigned int flagMask; //signals what flags have been used, not persistent
 	TerrainFlag flags[TERRAIN_FLAG_TOTAL];
 	unsigned int data[];
 } Terrain;
