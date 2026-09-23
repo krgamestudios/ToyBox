@@ -6,7 +6,7 @@ InitScreen(50 * 16, 50 * 16, "Bottle Battle");
 //load the terrain object
 var terrain = LoadTerrain();
 
-if (terrain == null) {
+if (terrain == null || true) {
 	import "terrain_procgen.toy" as procgen;
 	terrain = procgen()(50, 50, 20);
 	SaveTerrain(terrain);

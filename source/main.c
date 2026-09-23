@@ -508,8 +508,8 @@ int main(int argc, const char* argv[]) {
 
 	//load graphical assets
 	Tileset tileset = loadTileset("assets/terrain.png", 16, 16);
-	Texture2D coreSprite = LoadTexture("assets/Creep_empty.png"); //TMP
-	Texture2D creepSprite = LoadTexture("assets/Creep_full.png");
+	Texture2D coreSprite = LoadTexture("assets/Core_0.png");
+	Texture2D creepSprite = LoadTexture("assets/Creep_3.png");
 
 	if (playersCount <= 0) {
 		fprintf(stderr, TOY_CC_WARN "WARNING: No players loaded" TOY_CC_RESET "\n");
