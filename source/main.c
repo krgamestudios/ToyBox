@@ -399,6 +399,11 @@ Player* loadPlayer(const char* name) {
 	}
 
 	unsigned char* code = makeCodeFromSource(source, workingDir);
+
+	if (verbose) {
+		inspect_bytecode(code);
+	}
+
 	Player* player = allocatePlayer();
 	bindBytecodeToPlayer(player, code);
 
