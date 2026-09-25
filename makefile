@@ -30,14 +30,12 @@ Toy:
 #copy the various tools into the source repo
 .PHONY: tools
 tools:
-	cp Toy/repl/*library* $(BOX_SOURCEDIR)
 	cp Toy/repl/*inspector* $(BOX_SOURCEDIR)
 
 .PHONY: tools-clean
 tools-clean:
 ifeq ($(shell uname),Linux)
 	find . -type f -wholename "./$(BOX_SOURCEDIR)/*inspector*" -delete
-	find . -type f -wholename "./$(BOX_SOURCEDIR)/*library*" -delete
 else
 	@echo "tools-clean failed, check the makefile and add this platform"
 endif

@@ -146,7 +146,7 @@ static Player* playersHandle[PLAYERS_CAPACITY] = {0};
 sqlite3* database = NULL;
 
 //forward declarations
-Player* loadPlayer(const char* name);
+Player* loadPlayer(const char* name, int index);
 void freeAllPlayers();
 void tickAllPlayers();
 
@@ -260,13 +260,14 @@ void api_loadPlayer(Toy_VM* vm, Toy_FunctionNative* self) {
 	Toy_String* name = TOY_VALUE_AS_STRING(nameValue);
 
 	if (name->info.type == TOY_STRING_LEAF) {
-		playersHandle[playersCount++] = loadPlayer(name->leaf.data);
+		playersHandle[playersCount] = loadPlayer(name->leaf.data, playersCount);
 	}
 	else {
 		char* buffer = Toy_getStringRaw(name);
-		playersHandle[playersCount++] = loadPlayer(buffer);
+		playersHandle[playersCount] = loadPlayer(buffer, playersCount);
 		free(buffer);
 	}
+	playersCount++;
 
 	Toy_freeValue(nameValue);
 }
@@ -321,6 +322,10 @@ static CallbackPairs callbackPairs[] = {
 	{"InitScreen", api_initScreen},
 	{"InitLoop", api_initLoop},
 	{"LoadPlayer", api_loadPlayer},
+	//moved here from standard_library.c
+	{RAND_NAME, std_rand},
+	{"srand", std_srand},
+	{"time", std_time},
 	{NULL, NULL},
 };
 
@@ -384,7 +389,7 @@ void initGameAPI(Toy_VM* vm, Player* player) {
 }
 
 //util for finding and loading each player
-Player* loadPlayer(const char* name) {
+Player* loadPlayer(const char* name, int index) {
 	//build the path to the main file & working directory of the given player folder
 	char mainfile[1024];
 	snprintf(mainfile, 1024, "players/%s/main.toy", name);
@@ -404,7 +409,7 @@ Player* loadPlayer(const char* name) {
 		inspect_bytecode(code);
 	}
 
-	Player* player = allocatePlayer();
+	Player* player = allocatePlayer(index);
 	bindBytecodeToPlayer(player, code);
 
 	initStandardLibrary(&player->vm);

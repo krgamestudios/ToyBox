@@ -14,6 +14,12 @@ if (terrain == null || true) {
 
 SetTerrainLockState(true);
 
-LoadPlayer("ganondorf");
+//test differentiated seeds
 LoadPlayer("link");
-LoadPlayer("zelda");
+LoadPlayer("link");
+LoadPlayer("link");
+LoadPlayer("link");
+LoadPlayer("link");
+LoadPlayer("link");
+LoadPlayer("link");
+LoadPlayer("link");

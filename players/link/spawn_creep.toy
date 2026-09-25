@@ -12,6 +12,7 @@ for (var i = 0; i < 100; i++) {
 	y = rand() % terrain.height;
 
 	if (terrain.getTile(x, y) == 0) { //empty and useable
+		print x.asString .. " " .. y.asString;
 		return CreateCreep(x, y);
 	}
 }

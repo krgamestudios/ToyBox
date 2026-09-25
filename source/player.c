@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 //API for manipulating the game as a player
 static void api_createCreep(Toy_VM* vm, Toy_FunctionNative* self) {
@@ -171,6 +172,15 @@ static void api_getCore(Toy_VM* vm, Toy_FunctionNative* self) {
 	Toy_pushStack(&vm->stack, TOY_OPAQUE_FROM_POINTER(&player->core));
 }
 
+static void api_rand(Toy_VM* vm, Toy_FunctionNative* self) {
+	//the player object
+	void* ptr = (void*)(&self->meta1);
+	Player* player = *((Player**)ptr);
+
+	player->rngSeed = player->rngSeed * 1664525 + 1013904223;
+	Toy_pushStack(&vm->stack, TOY_VALUE_FROM_INTEGER(player->rngSeed > 0 ? player->rngSeed : -player->rngSeed));
+}
+
 //callback utils
 typedef struct CallbackPairs {
 	const char* name;
@@ -183,6 +193,7 @@ static CallbackPairs callbackPairs[] = {
 	{"GetCreepCount", api_getCreepCount},
 	{"GetCreepByIndex", api_getCreepByIndex},
 	{"GetCore", api_getCore},
+	{"rand", api_rand}, //replacing std_rand
 	{NULL, NULL},
 };
 
@@ -209,7 +220,7 @@ void initPlayerAPI(Toy_VM* vm, Player* player) {
 	//TODO: sqlite3 storage for creeps
 }
 
-Player* allocatePlayer() {
+Player* allocatePlayer(int index) {
 	Toy_VM vm;
 	Toy_initVM(&vm);
 	Player* player = (Player*)Toy_partitionBucket(&vm.memoryBucket, sizeof(Player));
@@ -218,6 +229,7 @@ Player* allocatePlayer() {
 	player->creepCapacity = 8; //TODO: increase the number of useable creeps
 	player->creepCount = 0;
 	player->creeps = (Creep*)Toy_partitionBucket(&vm.memoryBucket, sizeof(Creep) * player->creepCapacity);
+	player->rngSeed = ((231268 + index) * 1664525 + 1013904223) ^ (int)time(NULL);
 	return player;
 }
 
