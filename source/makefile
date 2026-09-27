@@ -25,7 +25,7 @@ GAME_TARGETNAME=toybox
 ifeq ($(OS),Windows_NT)
 	GAME_TARGETEXT=.exe
 else
-	GAME_TARGETEXT=.out
+	GAME_TARGETEXT=
 endif
 
 #linker fix

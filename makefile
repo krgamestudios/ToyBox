@@ -47,9 +47,10 @@ $(BOX_OUTDIR):
 .PHONY: clean
 clean: tools-clean
 ifeq ($(shell uname),Linux)
+	find . -type f -name '*repl' -delete
+	find . -type f -name '*toybox' -delete
 	find . -type f -name '*.o' -delete
 	find . -type f -name '*.a' -delete
-	find . -type f -name '*.out' -delete
 	find . -type f -name '*.exe' -delete
 	find . -type f -name '*.dll' -delete
 	find . -type f -name '*.lib' -delete
@@ -58,9 +59,10 @@ ifeq ($(shell uname),Linux)
 	find . -type d -name 'out' -delete
 	find . -type d -name 'obj' -delete
 else ifeq ($(shell uname),NetBSD)
+	find . -type f -name '*repl' -delete
+	find . -type f -name '*toybox' -delete
 	find . -type f -name '*.o' -delete
 	find . -type f -name '*.a' -delete
-	find . -type f -name '*.out' -delete
 	find . -type f -name '*.exe' -delete
 	find . -type f -name '*.dll' -delete
 	find . -type f -name '*.lib' -delete
@@ -73,9 +75,10 @@ else ifeq ($(OS),Windows_NT)
 	$(RM) out
 	$(RM) obj
 else ifeq ($(shell uname),Darwin)
+	find . -type f -name '*repl' -delete
+	find . -type f -name '*toybox' -delete
 	find . -type f -name '*.o' -delete
 	find . -type f -name '*.a' -delete
-	find . -type f -name '*.out' -delete
 	find . -type f -name '*.exe' -delete
 	find . -type f -name '*.dll' -delete
 	find . -type f -name '*.lib' -delete
@@ -86,4 +89,3 @@ else ifeq ($(shell uname),Darwin)
 else
 	@echo "Deletion failed - what platform is this?"
 endif
-
