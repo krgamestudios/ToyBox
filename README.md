@@ -1,6 +1,6 @@
 # ToyBox
 
-A test game for The Toy Scripting Langauge. Requires raylib, sqlite3 and Toy.
+A test game for The Toy Scripting Language. Requires raylib, sqlite3 and Toy.
 
 See https://toylang.com/ for details.
 

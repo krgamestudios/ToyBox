@@ -6,7 +6,7 @@ This is an RTS game where the players write code to automate their forces, witho
 
 # Gameplay
 
-The gameplay takes place in a grid-based world with various procedurally generated elements like walls and corridors. A player's forces must hunt down and destroy the oppoising player's core before they can do the same in return. To this end, players write algorithms using the bespoke scripting language "Toy" and API which is executed during each game "tick". How they design their algorithms will greatly impact the effectiveness of their forces.
+The gameplay takes place in a grid-based world with various procedurally generated elements like walls and corridors. A player's forces must hunt down and destroy the opposing player's core before they can do the same in return. To this end, players write algorithms using the bespoke scripting language "Toy" and API which is executed during each game "tick". How they design their algorithms will greatly impact the effectiveness of their forces.
 
 # Mechanics
 
@@ -21,7 +21,7 @@ A list of game objects/concepts players can control or fight for:
 
 For the time being, see `initEngineAPI` and `initGameAPI` for the APIs provided to `setup.toy` and the players, respectfully.
 
-See [toylang.com/](https://toylang.com/) for a short summary of the Toy langauge.
+See [toylang.com/](https://toylang.com/) for a short summary of the Toy language.
 
 # Graphical & Audio Assets
 
