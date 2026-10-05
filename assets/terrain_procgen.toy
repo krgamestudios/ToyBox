@@ -19,6 +19,7 @@ fn coreCriteria(terrain, x, y) {
 	if (terrain.getTile(x, y) != 0) return false; //is a floor
 	if (x <= 0 || y <= 0 || x >= terrain.width-1 || y >= terrain.height-1) return false; //is not an edge
 
+	//TODO: extend the "bounds" of a core to match the graphics
 	//sample the surrounding tiles
 	var total: Int = 0;
 	for (var i = -1; i <= 1; i++) {
@@ -96,8 +97,8 @@ fn generateTerrain(width, height, greebleCount) {
 			}
 
 			//check this doesn't overlap existing cores (remove it if it does)
-			for (var foobar = 0; foobar < coresX.length; foobar++) {
-				if (abs(coreCanditatesX[index] - coresX[foobar]) <= 2 || abs(coreCanditatesY[index] - coresY[foobar]) <= 2) {
+			for (var prior = 0; prior < coresX.length; prior++) {
+				if (abs(coreCanditatesX[index] - coresX[prior]) <= 2 || abs(coreCanditatesY[index] - coresY[prior]) <= 2) {
 					coreCanditatesX[index] = -1;
 					coreCanditatesY[index] = -1;
 					index = -1;
@@ -122,7 +123,7 @@ fn generateTerrain(width, height, greebleCount) {
 	var sourceCandidates = findCellsByCriteria(terrain, sourceCriteria);
 	var sourceCandidatesX = sourceCandidates[0];
 	var sourceCandidatesY = sourceCandidates[1];
-	sourceCandidates = null;
+	sourceCandidates = null; //set this to null so we don't use it by accident
 
 	for (var _ = 0; _ < 8; _++) { //NOTE: we flag 8 possible locations for sources, but we won't run an overlap check as that's less of a concern
 		//find a valid result that hasn't been removed
