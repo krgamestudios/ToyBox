@@ -129,12 +129,12 @@ KeyboardData keyboardData = {
 };
 
 KeyboardData keyPressedData = {
-	.type = OPAQUE_KEY_PRESSED,
+	.type = OPAQUE_KEYBOARD_PRESSED,
 	.callback = &IsKeyPressed,
 };
 
 KeyboardData keyReleasedData = {
-	.type = OPAQUE_KEY_RELEASED,
+	.type = OPAQUE_KEYBOARD_RELEASED,
 	.callback = &IsKeyReleased,
 };
 

@@ -273,6 +273,7 @@ static void std_pow(Toy_VM* vm, Toy_FunctionNative* self) {
 }
 
 //NOTE: 'srand()' alters the 'rand()' only within its own VM environment, so ensure the key is the same
+#define RAND_NAME "rand"
 static void std_rand(Toy_VM* vm, Toy_FunctionNative* self) {
 	//quick and dirty RNG
 	if (self->meta1 == 0) {
@@ -334,9 +335,9 @@ CallbackPairs callbackPairs[] = {
 	{"sign", std_sign},
 	{"sqrt", std_sqrt},
 	{"pow", std_pow},
-	// {RAND_NAME, std_rand},
-	// {"srand", std_srand},
-	// {"time", std_time},
+	{RAND_NAME, std_rand},
+	{"srand", std_srand},
+	{"time", std_time},
 
 	{NULL, NULL},
 };

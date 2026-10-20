@@ -6,25 +6,22 @@
 #include "toy_parser.h"
 #include "toy_compiler.h"
 #include "toy_vm.h"
-#include "toy_attributes.h"
-
-#include "keyboard.h"
-#include "mouse.h"
-#include "terrain.h"
-#include "direction.h"
-#include "tileset.h"
-#include "core.h"
-#include "creep.h"
-#include "player.h"
 
 #include "standard_library.h"
-#include "bytecode_inspector.h"
-
+#include "keyboard.h"
+#include "mouse.h"
+#include "direction.h"
 #include "database.h"
+
+#include "ast_inspector.h"
+#include "bucket_inspector.h"
+#include "bytecode_inspector.h"
+#include "scope_inspector.h"
+#include "stack_inspector.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <dirent.h>
 
 //utils
 static int errorAndContinueCallback(const char* msg) {
@@ -36,91 +33,78 @@ static int assertFailureAndExitCallback(const char* msg) {
 	exit(-1);
 }
 
+static void raylibLoggerCallback(int msgType, const char *text, va_list args) {
+	if (msgType >= LOG_ERROR) {
+		fprintf(stderr, TOY_CC_ERROR);
+	}
+	else if (msgType >= LOG_WARNING) {
+		fprintf(stderr, TOY_CC_WARN);
+	}
+
+	vfprintf(stderr, text, args);
+	fprintf(stderr, TOY_CC_RESET "\n");
+}
+
 static void sqliteErrorAndContinueCallback(void* ptr, int err, const char* msg) {
 	(void)ptr;
 	fprintf(stderr, TOY_CC_ERROR "SQL Error Code %d: %s" TOY_CC_RESET "\n", err, msg);
-}
-
-unsigned char* readFile(const char* path, int* size) {
-	//open the file
-	FILE* file = fopen(path, "rb");
-	if (file == NULL) {
-		*size = -1; //missing file error
-		return NULL;
-	}
-
-	//determine the file's length
-	fseek(file, 0L, SEEK_END);
-	*size = ftell(file);
-	rewind(file);
-
-	//make some space
-	unsigned char* buffer = malloc(*size + 1);
-	if (buffer == NULL) {
-		fclose(file);
-		return NULL;
-	}
-
-	//read the file
-	if (fread(buffer, sizeof(unsigned char), *size, file) < (unsigned int)(*size)) {
-		fclose(file);
-		free(buffer);
-		*size = -2; //singal a read error
-		return NULL;
-	}
-
-	buffer[(*size)] = '\0';
-
-	//clean up and return
-	fclose(file);
-	return buffer;
-}
-
-unsigned char* makeCodeFromSource(const char* source, const char* workingDir) {
-	Toy_Lexer lexer;
-	Toy_bindLexer(&lexer, source);
-
-	Toy_Parser parser;
-	Toy_bindParser(&parser, &lexer);
-	Toy_adjustParserWorkingDirectory(&parser, workingDir);
-
-	Toy_Bucket* bucket = Toy_allocateBucket(TOY_BUCKET_IDEAL);
-
-	Toy_Ast* ast = Toy_scanParser(&bucket, &parser);
-	unsigned char* code = Toy_compileToBytecode(ast);
-
-	Toy_freeBucket(&bucket);
-
-	return code;
 }
 
 //command line arguments
 typedef struct Settings {
 	bool error;
 	bool help;
-	bool verbose;
 	bool uncappedFPS;
+	unsigned char verbosity; //0 = None, 1 = simple, 2 = extra, 3 = all, 255 = suppress everything
 } Settings;
 
 void usageInfo(int argc, const char* argv[]) {
 	(void)argc;
-	printf("Usage: %s [-h] [-v] [-c] [-f script.toy]\n\n", argv[0]);
+	printf("Usage: %s [-h] [-c] [-d]\n\n", argv[0]);
 }
+
+void helpInfo(int argc, const char* argv[]) {
+	usageInfo(argc, argv);
+
+	printf("The ToyBox engine, a WIP game engine.\n\n");
+
+	printf("  -h,\t--help\t\t\tShow this help then exit.\n");
+	printf("  -c,\t--no-fps-cap\tDo not limit the FPS to a maximum value (this might break some logic).\n");
+	printf("  -d,\t--verbose\t\tPrint debugging information.\n");
+	printf("  -dd,\t--verbose-extra\t\tN/a\n");
+	printf("  -ddd,\t--verbose-all\t\tN/a\n");
+	printf("  -q,\t--quiet\t\t\tN/a\n");
+}
+
+//util macro
+#define CSTR_MATCH(FIRST, SECOND) (strlen(FIRST) == strlen(SECOND) && strcmp(FIRST, SECOND) == 0)
 
 Settings parseSettings(int argc, const char* argv[]) {
 	Settings settings = {0};
 
 	for (int i = 1; i < argc; i++) {
-		if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--help")) {
+		if (CSTR_MATCH(argv[i], "-h") || CSTR_MATCH(argv[i], "--help")) {
 			settings.help = true;
 		}
 
-		else if (!strcmp(argv[i], "-d") || !strcmp(argv[i], "--verbose")) {
-			settings.verbose = true;
+		else if (CSTR_MATCH(argv[i], "-c") || CSTR_MATCH(argv[i], "--no-fps-cap")) {
+			settings.uncappedFPS = true;
 		}
 
-		else if (!strcmp(argv[i], "-c") || !strcmp(argv[i], "--no-fps-cap")) {
-			settings.uncappedFPS = true;
+		else if (CSTR_MATCH(argv[i], "-d") || CSTR_MATCH(argv[i], "--verbose")) {
+			settings.verbosity = 1;
+		}
+
+		else if (CSTR_MATCH(argv[i], "-dd") || CSTR_MATCH(argv[i], "--verbose-extra")) {
+			settings.verbosity = 2;
+		}
+
+		else if (CSTR_MATCH(argv[i], "-ddd") || CSTR_MATCH(argv[i], "--verbose-all")) {
+			settings.verbosity = 3;
+		}
+
+		else if (CSTR_MATCH(argv[i], "-q") || CSTR_MATCH(argv[i], "--quiet")) {
+			settings.verbosity = 255;
 		}
 
 		else {
@@ -131,24 +115,16 @@ Settings parseSettings(int argc, const char* argv[]) {
 	return settings;
 }
 
-//static members
+//static globals
+static bool uncappedFPS = false;
+static unsigned char verbosity = false;
+
 static Toy_Function* onReady = NULL;
 static Toy_Function* onFrame = NULL;
 static Toy_Function* onClose = NULL;
-static bool verbose = false;
-static bool uncappedFPS = false;
 
-#define PLAYERS_CAPACITY 8
-static int playersCount = 0;
-static Player* playersHandle[PLAYERS_CAPACITY] = {0};
-
-//extern member definitions
+//extern definitions
 sqlite3* database = NULL;
-
-//forward declarations
-Player* loadPlayer(const char* name, int index);
-void freeAllPlayers();
-void tickAllPlayers();
 
 //engine API definitions
 void api_initScreen(Toy_VM* vm, Toy_FunctionNative* self) {
@@ -239,39 +215,6 @@ void api_initLoop(Toy_VM* vm, Toy_FunctionNative* self) {
 	}
 }
 
-void api_loadPlayer(Toy_VM* vm, Toy_FunctionNative* self) {
-	(void)self;
-
-	//check parameter count
-	if (vm->stack->count < 1) {
-		char buffer[256];
-		snprintf(buffer, 256, "Not enough parameters found in 'LoadPlayer'");
-		Toy_error(buffer);
-		return;
-	}
-
-	Toy_Value nameValue = Toy_popStack(&vm->stack);
-
-	if (!TOY_VALUE_IS_STRING(nameValue)) {
-		fprintf(stderr, TOY_CC_ERROR "ERROR: Bad types found in 'LoadPlayer', exiting" TOY_CC_RESET "\n");
-		exit(-1);
-	}
-
-	Toy_String* name = TOY_VALUE_AS_STRING(nameValue);
-
-	if (name->info.type == TOY_STRING_LEAF) {
-		playersHandle[playersCount] = loadPlayer(name->leaf.data, playersCount);
-	}
-	else {
-		char* buffer = Toy_getStringRaw(name);
-		playersHandle[playersCount] = loadPlayer(buffer, playersCount);
-		free(buffer);
-	}
-	playersCount++;
-
-	Toy_freeValue(nameValue);
-}
-
 //API opaque dispatch
 Toy_Value dispatchOpaqueAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attribute) {
 	//check for correct types
@@ -285,8 +228,8 @@ Toy_Value dispatchOpaqueAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value att
 
 	switch(*type) {
 		case OPAQUE_KEYBOARD:
-		case OPAQUE_KEY_PRESSED:
-		case OPAQUE_KEY_RELEASED:
+		case OPAQUE_KEYBOARD_PRESSED:
+		case OPAQUE_KEYBOARD_RELEASED:
 			return handleKeyboardAttributes(vm, compound, attribute);
 
 		case OPAQUE_MOUSE:
@@ -294,17 +237,8 @@ Toy_Value dispatchOpaqueAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value att
 		case OPAQUE_MOUSE_RELEASED:
 			return handleMouseAttributes(vm, compound, attribute);
 
-		case OPAQUE_TERRAIN:
-			return handleTerrainAttributes(vm, compound, attribute);
-
 		case OPAQUE_DIRECTION:
 			return handleDirectionAttributes(vm, compound, attribute);
-
-		case OPAQUE_CORE:
-			return handleCoreAttributes(vm, compound, attribute);
-
-		case OPAQUE_CREEP:
-			return handleCreepAttributes(vm, compound, attribute);
 	}
 
 	//only reached on error
@@ -321,11 +255,6 @@ typedef struct CallbackPairs {
 static CallbackPairs callbackPairs[] = {
 	{"InitScreen", api_initScreen},
 	{"InitLoop", api_initLoop},
-	{"LoadPlayer", api_loadPlayer},
-	//moved here from standard_library.c
-	{RAND_NAME, std_rand},
-	{"srand", std_srand},
-	{"time", std_time},
 	{NULL, NULL},
 };
 
@@ -361,120 +290,41 @@ void initEngineAPI(Toy_VM* vm) {
 	DECLARE_OPAQUE(&vm->memoryBucket, vm->scope, "MouseReleased", &mouseReleasedData);
 
 	DECLARE_OPAQUE(&vm->memoryBucket, vm->scope, "Direction", &directionData);
-
-	initTerrainAPI(vm);
-}
-
-void initGameAPI(Toy_VM* vm, Player* player) {
-	if (vm == NULL || vm->scope == NULL || vm->memoryBucket == NULL) {
-		fprintf(stderr, TOY_CC_ERROR "ERROR: Can't initialize game API, exiting\n" TOY_CC_RESET);
-		exit(-1);
-	}
-
-	Toy_setOpaqueAttributeHandler(dispatchOpaqueAttributes);
-
-	//TODO: remove player inputs
-	DECLARE_OPAQUE(&vm->memoryBucket, vm->scope, "Keyboard", &keyboardData);
-	DECLARE_OPAQUE(&vm->memoryBucket, vm->scope, "KeyPressed", &keyPressedData);
-	DECLARE_OPAQUE(&vm->memoryBucket, vm->scope, "KeyReleased", &keyReleasedData);
-
-	DECLARE_OPAQUE(&vm->memoryBucket, vm->scope, "Mouse", &mouseData);
-	DECLARE_OPAQUE(&vm->memoryBucket, vm->scope, "MousePressed", &mousePressedData);
-	DECLARE_OPAQUE(&vm->memoryBucket, vm->scope, "MouseReleased", &mouseReleasedData);
-
-	DECLARE_OPAQUE(&vm->memoryBucket, vm->scope, "Direction", &directionData);
-
-	initTerrainReadOnlyAPI(vm);
-	initPlayerAPI(vm, player);
-}
-
-//util for finding and loading each player
-Player* loadPlayer(const char* name, int index) {
-	//build the path to the main file & working directory of the given player folder
-	char mainfile[1024];
-	snprintf(mainfile, 1024, "players/%s/main.toy", name);
-	char workingDir[256];
-	Toy_private_getWorkingDir(workingDir, mainfile, 256);
-
-	//load & compile the player script
-	int size = 0;
-	const char* source = (char*)readFile(mainfile, &size);
-	if (source == NULL) {
-		return NULL;
-	}
-
-	unsigned char* code = makeCodeFromSource(source, workingDir);
-
-	if (verbose) {
-		inspect_bytecode(code);
-	}
-
-	Player* player = allocatePlayer(index);
-	bindBytecodeToPlayer(player, code);
-
-	initStandardLibrary(&player->vm);
-	initGameAPI(&player->vm, player);
-
-	//place the player's core on the map
-	Terrain* terrain = getTerrainPtr(); //must be called after the setup script is run
-	if (terrain == NULL) {
-		fprintf(stderr, TOY_CC_ERROR "ERROR: Couldn't place the player cores on non-existant terrain (The players can only be loaded after the terrain)\n" TOY_CC_RESET);
-		exit(-1);
-	}
-
-	//check that not all core flags are occupied
-	if ((terrain->flagMask ^ 0xFF) == 0) {
-		fprintf(stderr, TOY_CC_ERROR "ERROR: Too many players allocated\n" TOY_CC_RESET);
-		exit(-1);
-	}
-
-	//NOTE: first 8 flags are reserved for player core locations
-	for (unsigned int i = 0; i < 8; i++) {
-		if ((terrain->flagMask & (1 << i)) == 0) {
-			TerrainFlag flag = getTerrainFlag(terrain, i);
-			player->core.position = (Vector2){ .x = flag.x, .y = flag.y };
-			terrain->flagMask |= (1 << i);
-			break;
-		}
-	}
-
-	return player;
-}
-
-void freeAllPlayers() {
-	for (int i = 0; i < playersCount; i++) {
-		freePlayer(playersHandle[i]);
-	}
-	playersCount = 0;
-}
-
-void tickAllPlayers() {
-	for (int i = 0; i < playersCount; i++) {
-		Toy_VM* pvm = &playersHandle[i]->vm;
-		//this temporary scope lets players declare vars in the root of the file
-		pvm->scope = Toy_pushScope(&pvm->memoryBucket, pvm->scope);
-		Toy_runVM(pvm);
-		pvm->scope = Toy_popScope(pvm->scope);
-	}
 }
 
 //main file
 int main(int argc, const char* argv[]) {
-	//not necessary, but nice to have
-	Toy_setPrintCallback(puts);
-	Toy_setErrorCallback(errorAndContinueCallback);
-	Toy_setAssertFailureCallback(assertFailureAndExitCallback);
-	sqlite3_config(SQLITE_CONFIG_LOG, sqliteErrorAndContinueCallback);
-
-	//read settings and handle errors
+	//if there's args, process them
 	Settings settings = parseSettings(argc, argv);
-	if (settings.error || settings.help) {
+	if (settings.error) {
 		usageInfo(argc, argv);
 		return 1;
 	}
 
+	//configure the output options
+	Toy_setPrintCallback(puts);
+	Toy_setErrorCallback(errorAndContinueCallback);
+	Toy_setAssertFailureCallback(assertFailureAndExitCallback);
+	SetTraceLogCallback(raylibLoggerCallback);
+	sqlite3_config(SQLITE_CONFIG_LOG, sqliteErrorAndContinueCallback);
+
+	if (settings.verbosity == 255) {
+		SetTraceLogLevel(LOG_ERROR);
+	}
+	else if (settings.verbosity >= 1) {
+		SetTraceLogLevel(LOG_INFO);
+	}
+	else {
+		SetTraceLogLevel(LOG_WARNING);
+	}
+
+	if (settings.help) {
+		helpInfo(argc, argv);
+		return 0;
+	}
+
 	//static flags to avoid extra params
-	verbose = settings.verbose;
+	verbosity = settings.verbosity;
 	uncappedFPS = settings.uncappedFPS;
 
 	//open the database
@@ -483,10 +333,10 @@ int main(int argc, const char* argv[]) {
 	//run the setup script
 	int size = 0;
 	const char* setupFile = "assets/setup.toy";
-	const char* source = (char*)readFile(setupFile, &size);
+	const char* source = (char*)Toy_private_readFile(setupFile, &size);
 
 	if (!source) {
-		fprintf(stderr, TOY_CC_ERROR "ERROR: Failed to read a file, " TOY_CC_RESET);
+		fprintf(stderr, TOY_CC_ERROR "ERROR: Failed to read setup script, " TOY_CC_RESET);
 		if (size == -1) {
 			fprintf(stderr, TOY_CC_ERROR "Couldn't find %s\n" TOY_CC_RESET, setupFile);
 		}
@@ -498,38 +348,29 @@ int main(int argc, const char* argv[]) {
 
 	char workingDir[256];
 	Toy_private_getWorkingDir(workingDir, setupFile, 256);
-	unsigned char* entryCode = makeCodeFromSource(source, workingDir);
+	unsigned char* setupBytecode = Toy_private_makeCodeFromSource(source, workingDir);
 
 	//build and run the VM with all the APIs
 	Toy_VM vm;
 	Toy_initVM(&vm);
-	Toy_bindVM(&vm, entryCode, NULL);
+	Toy_bindVM(&vm, setupBytecode, NULL);
 
 	//initialize the libraries
 	initStandardLibrary(&vm);
 	initEngineAPI(&vm);
 
-	if (verbose) {
+	if (verbosity >= 1 && verbosity < 100) {
 		inspect_bytecode(vm.code);
 	}
 
 	Toy_runVM(&vm);
-	Toy_resetVM(&vm, false, false); //leave in a valid, but unset state
-
-	//load graphical assets
-	Tileset tileset = loadTileset("assets/terrain.png", 16, 16);
-	Texture2D coreSprite = LoadTexture("assets/Core_0.png");
-	Texture2D creepSprite = LoadTexture("assets/Creep_3.png");
-
-	if (playersCount <= 0) {
-		fprintf(stderr, TOY_CC_WARN "WARNING: No players loaded" TOY_CC_RESET "\n");
-	}
+	Toy_resetVM(&vm, true, false); //leave in a valid state, preserving the root scope
 
 	//setup and run the given loop functions, if able
 	if (onReady != NULL) {
 		Toy_bindVM(&vm, onReady->bytecode.code, onReady->bytecode.parentScope);
 		Toy_runVM(&vm);
-		Toy_resetVM(&vm, false, false);
+		Toy_resetVM(&vm, true, false);
 	}
 
 	//onFrame is called each frame
@@ -541,41 +382,13 @@ int main(int argc, const char* argv[]) {
 		//run the onFrame function
 		Toy_runVM(&vm); //no check needed, empty VMs are skipped
 
-		//process player scripts
-		static int ticker = 0; //TMP
-		if (ticker++ % 4 == 0)
-			tickAllPlayers();
+		//TODO: process game logic
 
 		//rendering all at once
 		BeginDrawing();
 		ClearBackground(WHITE); //TODO: remove this once the whole screen is covered
 
-		//draw the terrain, if able
-		Terrain* terrain = getTerrainPtr();
-		if (terrain) {
-			drawDataWithTileset(tileset, terrain->width, terrain->height, terrain->data);
-		}
-
-		//For each player
-		for (int p = 0; p < playersCount; p++) { //NOTE: positions multiplied by tile size
-			//draw the cores
-			DrawTexture(coreSprite,
-				playersHandle[p]->core.position.x * 16,
-				playersHandle[p]->core.position.y * 16,
-				WHITE);
-
-			//draw the creeps
-			for (unsigned int c = 0; c < playersHandle[p]->creepCapacity; c++) {
-				if (playersHandle[p]->creeps[c].active) {
-					DrawTexture(creepSprite,
-						playersHandle[p]->creeps[c].position.x * 16,
-						playersHandle[p]->creeps[c].position.y * 16,
-						WHITE);
-				}
-			}
-		}
-
-		if (verbose) {
+		if (verbosity >= 1 && verbosity < 100) {
 			DrawFPS(0,0);
 		}
 
@@ -594,14 +407,8 @@ int main(int argc, const char* argv[]) {
 		Toy_resetVM(&vm, false, false);
 	}
 
-	freeAllPlayers();
-
 	Toy_freeVM(&vm);
-	free(entryCode);
-
-	UnloadTexture(coreSprite);
-	UnloadTexture(creepSprite);
-	unloadTileset(tileset);
+	free(setupBytecode);
 
 	if (IsWindowReady()) {
 		CloseWindow();

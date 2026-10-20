@@ -1,25 +1,16 @@
 srand(time());
 
-InitScreen(50 * 16, 50 * 16, "Bottle Battle");
-//InitLoop(null, null, null);
-
-//load the terrain object
-var terrain = LoadTerrain();
-
-if (terrain == null) {
-	import "terrain_procgen.toy" as procgen;
-	terrain = procgen()(50, 50, 20);
-	SaveTerrain(terrain);
+fn setup() {
+	print "setup";
 }
 
-SetTerrainLockState(true);
+fn running() {
+	print "running";
+}
 
-//test differentiated seeds
-LoadPlayer("link");
-LoadPlayer("link");
-LoadPlayer("link");
-LoadPlayer("link");
-LoadPlayer("link");
-LoadPlayer("link");
-LoadPlayer("link");
-LoadPlayer("link");
+fn shutdown() {
+	print "shutdown";
+}
+
+InitScreen(800, 600, "Engine");
+InitLoop(setup, running, shutdown);
