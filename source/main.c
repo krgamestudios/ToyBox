@@ -11,7 +11,6 @@
 #include "keyboard.h"
 #include "mouse.h"
 #include "direction.h"
-#include "database.h"
 
 #include "ast_inspector.h"
 #include "bucket_inspector.h"
@@ -43,11 +42,6 @@ static void raylibLoggerCallback(int msgType, const char *text, va_list args) {
 
 	vfprintf(stderr, text, args);
 	fprintf(stderr, TOY_CC_RESET "\n");
-}
-
-static void sqliteErrorAndContinueCallback(void* ptr, int err, const char* msg) {
-	(void)ptr;
-	fprintf(stderr, TOY_CC_ERROR "SQL Error Code %d: %s" TOY_CC_RESET "\n", err, msg);
 }
 
 //command line arguments
@@ -122,9 +116,6 @@ static unsigned char verbosity = false;
 static Toy_Function* onReady = NULL;
 static Toy_Function* onFrame = NULL;
 static Toy_Function* onClose = NULL;
-
-//extern definitions
-sqlite3* database = NULL;
 
 //engine API definitions
 void api_initScreen(Toy_VM* vm, Toy_FunctionNative* self) {
@@ -306,7 +297,6 @@ int main(int argc, const char* argv[]) {
 	Toy_setErrorCallback(errorAndContinueCallback);
 	Toy_setAssertFailureCallback(assertFailureAndExitCallback);
 	SetTraceLogCallback(raylibLoggerCallback);
-	sqlite3_config(SQLITE_CONFIG_LOG, sqliteErrorAndContinueCallback);
 
 	if (settings.verbosity == 255) {
 		SetTraceLogLevel(LOG_ERROR);
@@ -326,9 +316,6 @@ int main(int argc, const char* argv[]) {
 	//static flags to avoid extra params
 	verbosity = settings.verbosity;
 	uncappedFPS = settings.uncappedFPS;
-
-	//open the database
-	sqlite3_open("save.db", &database);
 
 	//run the setup script
 	int size = 0;
@@ -413,8 +400,6 @@ int main(int argc, const char* argv[]) {
 	if (IsWindowReady()) {
 		CloseWindow();
 	}
-
-	sqlite3_close(database);
 
 	return 0;
 }
