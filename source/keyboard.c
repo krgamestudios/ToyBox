@@ -123,17 +123,17 @@ KeyboardMap keyboardMap[] = {
 	{0, NULL},
 };
 
-KeyboardData keyboardData = {
+KeyboardInput keyboardInput = {
 	.type = OPAQUE_KEYBOARD,
 	.callback = &IsKeyDown,
 };
 
-KeyboardData keyPressedData = {
+KeyboardInput keyPressedInput = {
 	.type = OPAQUE_KEYBOARD_PRESSED,
 	.callback = &IsKeyPressed,
 };
 
-KeyboardData keyReleasedData = {
+KeyboardInput keyReleasedInput = {
 	.type = OPAQUE_KEYBOARD_RELEASED,
 	.callback = &IsKeyReleased,
 };
@@ -143,7 +143,7 @@ KeyboardData keyReleasedData = {
 Toy_Value handleKeyboardAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attribute) {
 	(void)vm;
 
-	KeyboardData* kd = (KeyboardData*)TOY_VALUE_AS_OPAQUE(compound);
+	KeyboardInput* ki = (KeyboardInput*)TOY_VALUE_AS_OPAQUE(compound);
 
 	Toy_String* string = TOY_VALUE_AS_STRING(attribute);
 	const char* cstr = string->leaf.data;
@@ -151,7 +151,7 @@ Toy_Value handleKeyboardAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value att
 	//find the mapped value, if available
 	for (KeyboardMap* ptr = keyboardMap; ptr->cstr != NULL; ptr++) {
 		if (CSTR_MATCH(ptr->cstr, cstr)) {
-			bool result = kd->callback(ptr->raykey);
+			bool result = ki->callback(ptr->raykey);
 			return TOY_VALUE_FROM_BOOLEAN(result);
 		}
 	}

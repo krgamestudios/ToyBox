@@ -8,13 +8,13 @@
 typedef bool (*raykey_callback)(int);
 
 //keyboard opaque
-typedef struct KeyboardData {
+typedef struct KeyboardInput {
 	OpaqueType type;
 	raykey_callback callback;
-} KeyboardData;
+} KeyboardInput;
 
-extern KeyboardData keyboardData;
-extern KeyboardData keyPressedData;
-extern KeyboardData keyReleasedData;
+extern KeyboardInput keyboardInput;
+extern KeyboardInput keyPressedInput;
+extern KeyboardInput keyReleasedInput;
 
 Toy_Value handleKeyboardAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attribute);

@@ -272,13 +272,13 @@ void initEngineAPI(Toy_VM* vm) {
 
 	Toy_setOpaqueAttributeHandler(dispatchOpaqueAttributes);
 
-	DECLARE_OPAQUE(&vm->memoryBucket, vm->scope, "Keyboard", &keyboardData);
-	DECLARE_OPAQUE(&vm->memoryBucket, vm->scope, "KeyPressed", &keyPressedData);
-	DECLARE_OPAQUE(&vm->memoryBucket, vm->scope, "KeyReleased", &keyReleasedData);
+	DECLARE_OPAQUE(&vm->memoryBucket, vm->scope, "Keyboard", &keyboardInput);
+	DECLARE_OPAQUE(&vm->memoryBucket, vm->scope, "KeyPressed", &keyPressedInput);
+	DECLARE_OPAQUE(&vm->memoryBucket, vm->scope, "KeyReleased", &keyReleasedInput);
 
-	DECLARE_OPAQUE(&vm->memoryBucket, vm->scope, "Mouse", &mouseData);
-	DECLARE_OPAQUE(&vm->memoryBucket, vm->scope, "MousePressed", &mousePressedData);
-	DECLARE_OPAQUE(&vm->memoryBucket, vm->scope, "MouseReleased", &mouseReleasedData);
+	DECLARE_OPAQUE(&vm->memoryBucket, vm->scope, "Mouse", &mouseInput);
+	DECLARE_OPAQUE(&vm->memoryBucket, vm->scope, "MousePressed", &mousePressedInput);
+	DECLARE_OPAQUE(&vm->memoryBucket, vm->scope, "MouseReleased", &mouseReleasedInput);
 
 	DECLARE_OPAQUE(&vm->memoryBucket, vm->scope, "Direction", &directionData);
 }

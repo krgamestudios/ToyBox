@@ -8,13 +8,13 @@
 typedef bool (*raymouse_callback)(int);
 
 //mouse opaque
-typedef struct MouseData {
+typedef struct MouseInput {
 	OpaqueType type;
 	raymouse_callback callback;
-} MouseData;
+} MouseInput;
 
-extern MouseData mouseData;
-extern MouseData mousePressedData;
-extern MouseData mouseReleasedData;
+extern MouseInput mouseInput;
+extern MouseInput mousePressedInput;
+extern MouseInput mouseReleasedInput;
 
 Toy_Value handleMouseAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attribute);

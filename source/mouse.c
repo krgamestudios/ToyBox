@@ -3,17 +3,17 @@
 #include <stdio.h>
 #include <string.h>
 
-MouseData mouseData = {
+MouseInput mouseInput = {
 	.type = OPAQUE_MOUSE,
 	.callback = &IsMouseButtonDown,
 };
 
-MouseData mousePressedData = {
+MouseInput mousePressedInput = {
 	.type = OPAQUE_MOUSE_PRESSED,
 	.callback = &IsMouseButtonPressed,
 };
 
-MouseData mouseReleasedData = {
+MouseInput mouseReleasedInput = {
 	.type = OPAQUE_MOUSE_PRESSED,
 	.callback = &IsMouseButtonReleased,
 };
@@ -23,22 +23,22 @@ MouseData mouseReleasedData = {
 Toy_Value handleMouseAttributes(Toy_VM* vm, Toy_Value compound, Toy_Value attribute) {
 	(void)vm;
 
-	MouseData* md = (MouseData*)TOY_VALUE_AS_OPAQUE(compound);
+	MouseInput* mi = (MouseInput*)TOY_VALUE_AS_OPAQUE(compound);
 
 	Toy_String* string = TOY_VALUE_AS_STRING(attribute);
 	const char* cstr = string->leaf.data;
 
 	//find the correct operation
 	if (CSTR_MATCH(cstr, "LEFT")) {
-		bool result = md->callback(MOUSE_BUTTON_LEFT);
+		bool result = mi->callback(MOUSE_BUTTON_LEFT);
 		return TOY_VALUE_FROM_BOOLEAN(result);
 	}
 	else if (CSTR_MATCH(cstr, "RIGHT")) {
-		bool result = md->callback(MOUSE_BUTTON_RIGHT);
+		bool result = mi->callback(MOUSE_BUTTON_RIGHT);
 		return TOY_VALUE_FROM_BOOLEAN(result);
 	}
 	else if (CSTR_MATCH(cstr, "MIDDLE")) {
-		bool result = md->callback(MOUSE_BUTTON_MIDDLE);
+		bool result = mi->callback(MOUSE_BUTTON_MIDDLE);
 		return TOY_VALUE_FROM_BOOLEAN(result);
 	}
 	else if (CSTR_MATCH(cstr, "POS_X")) {
