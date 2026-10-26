@@ -11,6 +11,7 @@
 #include "keyboard.h"
 #include "mouse.h"
 #include "direction.h"
+#include "sprite.h"
 
 #include "ast_inspector.h"
 #include "bucket_inspector.h"
@@ -360,6 +361,9 @@ int main(int argc, const char* argv[]) {
 		Toy_resetVM(&vm, true, false);
 	}
 
+	Texture2D texture = LoadTexture("assets/atlas.png"); //test file from KenneyNL
+	Sprite sprite = makeSpriteFromTextureAnim(texture,(Rectangle){0,0,32,32}, (Vector2){32,0}, 3, 60);
+
 	//onFrame is called each frame
 	if (onFrame != NULL) {
 		Toy_bindVM(&vm, onFrame->bytecode.code, onFrame->bytecode.parentScope);
@@ -379,6 +383,8 @@ int main(int argc, const char* argv[]) {
 			DrawFPS(0,0);
 		}
 
+		drawSpriteTo(&sprite, (Vector2){100,100});
+
 		EndDrawing();
 	}
 
@@ -386,6 +392,8 @@ int main(int argc, const char* argv[]) {
 	if (onFrame != NULL) {
 		Toy_resetVM(&vm, false, false);
 	}
+
+	UnloadTexture(texture);
 
 	//cleanup
 	if (onClose != NULL) {
