@@ -13,6 +13,7 @@
 #include "direction.h"
 #include "sprite.h"
 #include "aasquare.h"
+#include "character.h"
 
 #include "ast_inspector.h"
 #include "bucket_inspector.h"
@@ -376,11 +377,42 @@ int main(int argc, const char* argv[]) {
 		squares[i] = makeAASquareFromRectangle((Rectangle){rand()%400,rand()%400,25,25});
 	}
 
+	Character gary = loadCharacter("assets/gary_pixels.png");
+
 	while (!WindowShouldClose()) {
 		//run the onFrame function
 		Toy_runVM(&vm); //no check needed, empty VMs are skipped
 
-		//TODO: process game logic
+		//TODO: process game input
+		Vector2 motion = {0,0};
+		if (IsKeyDown(KEY_UP)) {
+			motion.y -= 1;
+		}
+		if (IsKeyDown(KEY_DOWN)) {
+			motion.y += 1;
+		}
+		if (IsKeyDown(KEY_LEFT)) {
+			motion.x -= 1;
+		}
+		if (IsKeyDown(KEY_RIGHT)) {
+			motion.x += 1;
+		}
+		if (motion.x != 0 && motion.y != 0) {
+			motion.x *= 0.707f;
+			motion.y *= 0.707f;
+		}
+		gary.position.x += motion.x;
+		gary.position.y += motion.y;
+
+		//TODO: process game collision logic
+		for (unsigned int i = 0; i < squareCount; i++) {
+			if (checkForAASquareWorldOverlap(gary.position, gary.square, (Vector2){0,0}, squares[i])) {
+				squares[i].min.x += motion.x;
+				squares[i].min.y += motion.y;
+				squares[i].max.x += motion.x;
+				squares[i].max.y += motion.y;
+			}
+		}
 
 		//rendering all at once
 		BeginDrawing();
@@ -393,6 +425,7 @@ int main(int argc, const char* argv[]) {
 		drawSpriteTo(&sprite, (Vector2){100,100});
 		for (unsigned int i = 0; i < squareCount; i++) {
 			Color color = BLUE;
+
 			for (unsigned int j = 0; j < squareCount; j++) {
 				if (i != j && checkForAASquareOverlap(squares[i], squares[j])) {
 					color = RED;
@@ -400,11 +433,19 @@ int main(int argc, const char* argv[]) {
 				}
 			}
 
+			if (checkForAASquareWorldOverlap(gary.position, gary.square, (Vector2){0,0}, squares[i])) {
+				color = GREEN;
+			}
+
 			debugDrawAASquare(squares[i], color);
 		}
 
+		drawSpriteTo(&gary.sprite, gary.position);
+
 		EndDrawing();
 	}
+
+	unloadCharacter(gary);
 
 	//clear after the final frame
 	if (onFrame != NULL) {
