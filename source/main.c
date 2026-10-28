@@ -12,6 +12,7 @@
 #include "mouse.h"
 #include "direction.h"
 #include "sprite.h"
+#include "aasquare.h"
 
 #include "ast_inspector.h"
 #include "bucket_inspector.h"
@@ -369,6 +370,12 @@ int main(int argc, const char* argv[]) {
 		Toy_bindVM(&vm, onFrame->bytecode.code, onFrame->bytecode.parentScope);
 	}
 
+	const unsigned int squareCount = 50;
+	AASquare squares[squareCount];
+	for (unsigned int i = 0; i < squareCount; i++) {
+		squares[i] = makeAASquareFromRectangle((Rectangle){rand()%400,rand()%400,25,25});
+	}
+
 	while (!WindowShouldClose()) {
 		//run the onFrame function
 		Toy_runVM(&vm); //no check needed, empty VMs are skipped
@@ -384,6 +391,17 @@ int main(int argc, const char* argv[]) {
 		}
 
 		drawSpriteTo(&sprite, (Vector2){100,100});
+		for (unsigned int i = 0; i < squareCount; i++) {
+			Color color = BLUE;
+			for (unsigned int j = 0; j < squareCount; j++) {
+				if (i != j && checkForAASquareOverlap(squares[i], squares[j])) {
+					color = RED;
+					break;
+				}
+			}
+
+			debugDrawAASquare(squares[i], color);
+		}
 
 		EndDrawing();
 	}

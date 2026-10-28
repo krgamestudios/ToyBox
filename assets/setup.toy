@@ -1,16 +1,4 @@
 srand(time());
 
-fn setup() {
-	print "setup";
-}
-
-fn running() {
-	print "running";
-}
-
-fn shutdown() {
-	print "shutdown";
-}
-
 InitScreen(800, 600, "Engine");
-InitLoop(setup, running, shutdown);
+//InitLoop(setup, running, shutdown);
